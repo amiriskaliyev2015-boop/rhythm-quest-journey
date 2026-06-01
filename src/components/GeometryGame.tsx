@@ -404,16 +404,35 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       ctx.lineTo(w, groundY);
       ctx.stroke();
 
-      // ceiling for flying vehicles
-      if (hasCeil()) {
+      // ceiling wall for all levels
+      {
         const ceilY = groundY - CEIL_HEIGHT;
-        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        // solid base
+        ctx.fillStyle = "rgba(10,10,15,0.85)";
         ctx.fillRect(0, 0, w, ceilY);
-        ctx.strokeStyle = level.accent;
+        // hazard stripes
+        ctx.fillStyle = "rgba(239,68,68,0.25)";
+        const stripeW = 20;
+        const offset = scrollX % (stripeW * 2);
+        for (let sx = -offset; sx < w; sx += stripeW * 2) {
+          ctx.fillRect(sx, 0, stripeW, ceilY);
+        }
+        // top danger line
+        ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 3;
+        ctx.shadowColor = "#ef4444";
+        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.moveTo(0, ceilY);
         ctx.lineTo(w, ceilY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        // inner accent
+        ctx.strokeStyle = level.accent;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, ceilY - 3);
+        ctx.lineTo(w, ceilY - 3);
         ctx.stroke();
       }
 
