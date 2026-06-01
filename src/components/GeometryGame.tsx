@@ -9,9 +9,20 @@ type GameState = "menu" | "playing" | "dead" | "won";
 
 interface Props {
   level: Level;
+  bestAttempts: number | null;
   onExit: () => void;
-  onWin: () => void;
+  onWin: (info: { attempts: number; reward: number; isNewRecord: boolean }) => void;
 }
+
+const BASE_REWARD = 50;
+const RECORD_BONUS = 100;
+const computeReward = (levelIndex: number, attempts: number, prevBest: number | null) => {
+  const base = BASE_REWARD * (levelIndex + 1);
+  const isNewRecord = prevBest === null || attempts < prevBest;
+  const bonus = isNewRecord ? RECORD_BONUS * (levelIndex + 1) : 0;
+  return { reward: base + bonus, isNewRecord };
+};
+
 
 const VEHICLE_LABELS: Record<Vehicle, string> = {
   cube: "GEM",
