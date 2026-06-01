@@ -83,6 +83,41 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
 
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle>(level.startingVehicle);
 
+  // Per-level procedural music.
+  const [muted, setMuted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("gd_muted") === "1";
+  });
+  const musicRef = useRef<LevelMusic | null>(null);
+  useEffect(() => {
+    const music = new LevelMusic(level.index);
+    music.setMuted(muted);
+    musicRef.current = music;
+    // Browsers require a user gesture for AudioContext; start on first interaction.
+    const begin = () => {
+      music.start();
+      window.removeEventListener("pointerdown", begin);
+      window.removeEventListener("keydown", begin);
+    };
+    // Try immediately (works if a gesture already happened), and also on next input.
+    music.start();
+    window.addEventListener("pointerdown", begin);
+    window.addEventListener("keydown", begin);
+    return () => {
+      window.removeEventListener("pointerdown", begin);
+      window.removeEventListener("keydown", begin);
+      music.stop();
+      musicRef.current = null;
+    };
+  }, [level.index]);
+  useEffect(() => {
+    musicRef.current?.setMuted(muted);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("gd_muted", muted ? "1" : "0");
+    }
+  }, [muted]);
+
+
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
