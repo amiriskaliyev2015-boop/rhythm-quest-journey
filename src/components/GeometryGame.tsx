@@ -45,7 +45,7 @@ function Game({ level, onExit, onWin }: Props) {
     window.addEventListener("resize", resize);
 
     let vehicle: Vehicle = level.startingVehicle;
-    const hasCeil = () => vehicle === "ship" || vehicle === "ball" || vehicle === "wave";
+    const hasCeil = () => true;
     const consumedPortals = new Set<number>();
     
 
