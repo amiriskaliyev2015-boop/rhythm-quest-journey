@@ -1054,8 +1054,14 @@ export default function GeometryGame() {
           <p className="mt-3 text-muted-foreground tracking-widest text-sm uppercase">
             15 levels · 5 shapes · neon shape-runner
           </p>
-          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
-            <span className="text-cyan-300">◆</span> {prisms} PRISMS
+          <div className="mt-4 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
+            <span className="text-cyan-300">◆</span> {prisms.toLocaleString()} PRISMS
+            <button
+              onClick={() => { setShopMsg(null); setScreen("shop"); }}
+              className="ml-2 px-3 py-1 rounded-full bg-white text-black text-xs tracking-widest hover:scale-105 transition"
+            >
+              SHOP
+            </button>
           </div>
 
         </div>
