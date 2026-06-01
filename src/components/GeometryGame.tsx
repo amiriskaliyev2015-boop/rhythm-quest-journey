@@ -541,13 +541,13 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       const s = PLAYER_SIZE / 2;
       // Shared shadow + gradient helper
       const pgrad = ctx.createRadialGradient(-s * 0.4, -s * 0.5, 2, 0, 0, s * 1.8);
-      pgrad.addColorStop(0, "#ffffff");
-      pgrad.addColorStop(0.3, level.accent);
+      pgrad.addColorStop(0, skin.secondary);
+      pgrad.addColorStop(0.3, skin.primary);
       pgrad.addColorStop(1, "#0b1220");
       ctx.fillStyle = pgrad;
       ctx.strokeStyle = "#0f172a";
       ctx.lineWidth = 2.5;
-      ctx.shadowColor = "rgba(0,0,0,0.4)";
+      ctx.shadowColor = skin.glow;
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 3;
 
