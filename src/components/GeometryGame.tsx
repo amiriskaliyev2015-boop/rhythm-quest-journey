@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LEVELS, type Level, type Obstacle } from "@/lib/game-engine";
+import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
 
 const GROUND_H = 80;
 const PLAYER_SIZE = 40;
@@ -12,6 +12,14 @@ interface Props {
   onExit: () => void;
   onWin: () => void;
 }
+
+const VEHICLE_LABELS: Record<Vehicle, string> = {
+  cube: "CUBE",
+  ship: "SHIP",
+  ball: "BALL",
+  ufo: "UFO",
+  wave: "WAVE",
+};
 
 function Game({ level, onExit, onWin }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,21 +43,31 @@ function Game({ level, onExit, onWin }: Props) {
     resize();
     window.addEventListener("resize", resize);
 
+    const hasCeiling =
+      level.vehicle === "ship" || level.vehicle === "ball" || level.vehicle === "wave";
+
     // World state
     let scrollX = 0;
     let py = 0; // y above ground (positive = up)
     let vy = 0;
     let onGround = true;
+    let onCeiling = false;
+    let gravityDir = 1; // 1 = down (toward ground), -1 = up (toward ceiling) — used by ball
     let rotation = 0;
     let last = performance.now();
     let running = true;
-    let jumpHeld = false;
+    let inputHeld = false;
+    let prevHeld = false;
+
+    const playerTop = () => py + PLAYER_SIZE;
 
     const reset = () => {
       scrollX = 0;
       py = 0;
       vy = 0;
       onGround = true;
+      onCeiling = false;
+      gravityDir = 1;
       rotation = 0;
       stateRef.current = "playing";
       setProgress(0);
@@ -69,69 +87,85 @@ function Game({ level, onExit, onWin }: Props) {
       onWin();
     };
 
-    const tryJump = () => {
-      jumpHeld = true;
+    const handlePress = () => {
+      inputHeld = true;
       if (stateRef.current === "dead") {
         setAttempts((a) => a + 1);
         reset();
         return;
       }
       if (stateRef.current !== "playing") return;
-      if (onGround) {
-        vy = level.jump;
-        onGround = false;
+
+      if (level.vehicle === "cube") {
+        if (onGround) {
+          vy = level.jump;
+          onGround = false;
+        }
+      } else if (level.vehicle === "ball") {
+        if (onGround || onCeiling) {
+          gravityDir *= -1;
+          onGround = false;
+          onCeiling = false;
+          vy = 0;
+        }
+      } else if (level.vehicle === "ufo") {
+        // tap-only flap (handled on press edge below too)
+        vy = level.jump * 0.85;
       }
+      // ship / wave use hold state in the frame loop
+    };
+
+    const handleRelease = () => {
+      inputHeld = false;
     };
 
     const keyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
         e.preventDefault();
-        tryJump();
+        if (!prevHeld) handlePress();
+        prevHeld = true;
       } else if (e.code === "Escape") {
         onExit();
       }
     };
     const keyUp = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
-        jumpHeld = false;
+        prevHeld = false;
+        handleRelease();
       }
     };
-    const pointerDown = () => tryJump();
-    const pointerUp = () => {
-      jumpHeld = false;
-    };
+    const pointerDown = () => handlePress();
+    const pointerUp = () => handleRelease();
 
     window.addEventListener("keydown", keyDown);
     window.addEventListener("keyup", keyUp);
     canvas.addEventListener("pointerdown", pointerDown);
     canvas.addEventListener("pointerup", pointerUp);
 
-    // Collision helpers
-    const playerRect = () => ({
-      x: PLAYER_X,
-      y: py, // above ground
-      w: PLAYER_SIZE,
-      h: PLAYER_SIZE,
-    });
-
+    // Collision: returns true on lethal hit, "land" if landed on block top
     const collides = (o: Obstacle, groundY: number) => {
-      const pr = playerRect();
-      // convert to screen coords (y axis flipped — ground at groundY)
-      const px1 = pr.x;
-      const px2 = pr.x + pr.w;
-      const py1 = groundY - pr.y - pr.h;
-      const py2 = groundY - pr.y;
+      const px1 = PLAYER_X;
+      const px2 = PLAYER_X + PLAYER_SIZE;
+      const py1 = groundY - py - PLAYER_SIZE; // top in screen coords
+      const py2 = groundY - py; // bottom
 
       if (o.type === "spike") {
         const ox = o.x - scrollX;
         if (ox + o.w < px1 || ox > px2) return false;
-        const oy2 = groundY;
-        const oy1 = groundY - o.h;
-        // triangle approx with shrink
+        let oy1: number, oy2: number;
+        if (o.flip) {
+          // ceiling spike, hangs down from top of play area
+          const ceilY = groundY - CEIL_HEIGHT;
+          oy1 = ceilY;
+          oy2 = ceilY + o.h;
+        } else {
+          oy2 = groundY;
+          oy1 = groundY - o.h;
+        }
         const ix1 = Math.max(px1, ox) + 4;
         const ix2 = Math.min(px2, ox + o.w) - 4;
         if (ix1 >= ix2) return false;
-        return py2 > oy1 + 4 && py1 < oy2;
+        return py2 > oy1 + 4 && py1 < oy2 - 4;
       }
       if (o.type === "block") {
         const ox = o.x - scrollX;
@@ -140,10 +174,7 @@ function Game({ level, onExit, onWin }: Props) {
         const oy1 = oy2 - o.h;
         if (px2 <= ox + 2 || px1 >= ox2 - 2) return false;
         if (py2 <= oy1 + 2 || py1 >= oy2 - 2) return false;
-        // landing on top?
         if (vy <= 0 && py1 < oy1 && py2 > oy1 && py2 - oy1 < 18) {
-          // land
-          py = groundY - oy1 - PLAYER_SIZE - (groundY - oy1 - PLAYER_SIZE);
           return "land" as const;
         }
         return true;
@@ -167,76 +198,92 @@ function Game({ level, onExit, onWin }: Props) {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       const groundY = h - GROUND_H;
+      const ceilingPy = CEIL_HEIGHT - PLAYER_SIZE; // max py when ceiling exists
 
       if (stateRef.current === "playing") {
         scrollX += level.speed * dt;
-        // gravity
-        vy -= level.gravity * dt;
-        py += vy * dt;
 
-        // Check block landing first
+        // ----- VEHICLE PHYSICS -----
+        if (level.vehicle === "cube") {
+          vy -= level.gravity * dt;
+          py += vy * dt;
+        } else if (level.vehicle === "ship") {
+          const thrust = level.gravity * 0.9;
+          vy += (inputHeld ? thrust : -thrust) * dt;
+          vy = Math.max(-700, Math.min(700, vy));
+          py += vy * dt;
+        } else if (level.vehicle === "ball") {
+          // gravity direction can be flipped
+          vy -= level.gravity * 0.85 * dt * gravityDir;
+          py += vy * dt;
+        } else if (level.vehicle === "ufo") {
+          vy -= level.gravity * 0.9 * dt;
+          py += vy * dt;
+        } else if (level.vehicle === "wave") {
+          const v = level.speed; // 45° travel
+          vy = inputHeld ? v : -v;
+          py += vy * dt;
+        }
+
+        // ----- BLOCK LANDING (cube only) -----
         let landedOnBlock = false;
-        let topOfBlock = 0;
-        for (const o of level.obstacles) {
-          if (o.type !== "block") continue;
-          const ox = o.x - scrollX;
-          if (ox > w || ox + o.w < 0) continue;
-          const pr = playerRect();
-          const px1 = pr.x;
-          const px2 = pr.x + pr.w;
-          const blockTop = o.y + o.h; // height above ground
-          if (px2 > ox + 2 && px1 < ox + o.w - 2) {
-            // Falling onto top
-            const prevBottom = py - vy * dt;
-            if (vy <= 0 && prevBottom >= blockTop - 1 && py <= blockTop + 1) {
-              py = blockTop;
-              vy = 0;
-              onGround = true;
-              landedOnBlock = true;
-              topOfBlock = blockTop;
+        if (level.vehicle === "cube") {
+          for (const o of level.obstacles) {
+            if (o.type !== "block") continue;
+            const ox = o.x - scrollX;
+            if (ox > w || ox + o.w < 0) continue;
+            const px1 = PLAYER_X;
+            const px2 = PLAYER_X + PLAYER_SIZE;
+            const blockTop = o.y + o.h;
+            if (px2 > ox + 2 && px1 < ox + o.w - 2) {
+              const prevBottom = py - vy * dt;
+              if (vy <= 0 && prevBottom >= blockTop - 1 && py <= blockTop + 1) {
+                py = blockTop;
+                vy = 0;
+                onGround = true;
+                landedOnBlock = true;
+              }
             }
           }
         }
 
-        // Ground
+        // ----- GROUND / CEILING CLAMPS -----
+        onCeiling = false;
         if (!landedOnBlock) {
           if (py <= 0) {
             py = 0;
+            // wave dies on touching the ground
+            if (level.vehicle === "wave") die();
             vy = 0;
             onGround = true;
           } else {
             onGround = false;
           }
         }
-
-        // If standing on a block but block moved away, fall
-        if (landedOnBlock) {
-          let stillOn = false;
-          for (const o of level.obstacles) {
-            if (o.type !== "block") continue;
-            const ox = o.x - scrollX;
-            const blockTop = o.y + o.h;
-            const pr = playerRect();
-            if (
-              Math.abs(py - blockTop) < 2 &&
-              blockTop === topOfBlock &&
-              pr.x + pr.w > ox + 2 &&
-              pr.x < ox + o.w - 2
-            ) {
-              stillOn = true;
-              break;
-            }
-          }
-          if (!stillOn) onGround = false;
+        if (hasCeiling && py >= ceilingPy) {
+          py = ceilingPy;
+          if (level.vehicle === "wave") die();
+          vy = 0;
+          onCeiling = true;
         }
 
-        // Rotation
-        if (!onGround) rotation += dt * 6;
-        else rotation = Math.round(rotation / (Math.PI / 2)) * (Math.PI / 2);
+        // ----- ROTATION -----
+        if (level.vehicle === "cube") {
+          if (!onGround) rotation += dt * 6;
+          else rotation = Math.round(rotation / (Math.PI / 2)) * (Math.PI / 2);
+        } else if (level.vehicle === "ball") {
+          rotation += dt * 8 * gravityDir;
+        } else if (level.vehicle === "ship") {
+          rotation = Math.max(-0.5, Math.min(0.5, -vy / 700));
+        } else if (level.vehicle === "wave") {
+          rotation = inputHeld ? -Math.PI / 4 : Math.PI / 4;
+        } else {
+          rotation = 0;
+        }
 
-        // Collisions
+        // ----- COLLISIONS -----
         for (const o of level.obstacles) {
-          const ox = (o as any).x - scrollX;
+          const ox = (o as { x: number }).x - scrollX;
           if (ox > w + 60 || ox < -120) continue;
           const r = collides(o, groundY);
           if (r === true) {
@@ -245,14 +292,12 @@ function Game({ level, onExit, onWin }: Props) {
           }
         }
 
-        // Progress / win
         const prog = Math.min(1, scrollX / level.length);
         setProgress(prog);
         if (prog >= 1) win();
       }
 
       // ----- RENDER -----
-      // background gradient
       const grad = ctx.createLinearGradient(0, 0, 0, h);
       grad.addColorStop(0, level.bgFrom);
       grad.addColorStop(1, level.bgTo);
@@ -277,6 +322,19 @@ function Game({ level, onExit, onWin }: Props) {
       ctx.lineTo(w, groundY);
       ctx.stroke();
 
+      // ceiling for flying vehicles
+      if (hasCeiling) {
+        const ceilY = groundY - CEIL_HEIGHT;
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(0, 0, w, ceilY);
+        ctx.strokeStyle = level.accent;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, ceilY);
+        ctx.lineTo(w, ceilY);
+        ctx.stroke();
+      }
+
       // ground grid
       ctx.strokeStyle = "rgba(255,255,255,0.08)";
       ctx.lineWidth = 1;
@@ -291,17 +349,25 @@ function Game({ level, onExit, onWin }: Props) {
 
       // obstacles
       for (const o of level.obstacles) {
-        const ox = (o as any).x - scrollX;
+        const ox = (o as { x: number }).x - scrollX;
         if (ox > w + 60 || ox < -120) continue;
         if (o.type === "spike") {
           ctx.fillStyle = level.accent;
+          ctx.strokeStyle = "rgba(0,0,0,0.6)";
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(ox, groundY);
-          ctx.lineTo(ox + o.w / 2, groundY - o.h);
-          ctx.lineTo(ox + o.w, groundY);
+          if (o.flip) {
+            const ceilY = groundY - CEIL_HEIGHT;
+            ctx.moveTo(ox, ceilY);
+            ctx.lineTo(ox + o.w / 2, ceilY + o.h);
+            ctx.lineTo(ox + o.w, ceilY);
+          } else {
+            ctx.moveTo(ox, groundY);
+            ctx.lineTo(ox + o.w / 2, groundY - o.h);
+            ctx.lineTo(ox + o.w, groundY);
+          }
           ctx.closePath();
           ctx.fill();
-          ctx.strokeStyle = "rgba(0,0,0,0.6)";
           ctx.stroke();
         } else if (o.type === "block") {
           const by = groundY - o.y - o.h;
@@ -339,20 +405,83 @@ function Game({ level, onExit, onWin }: Props) {
       ctx.save();
       ctx.translate(PLAYER_X + PLAYER_SIZE / 2, cy);
       ctx.rotate(rotation);
+
       const pg = ctx.createLinearGradient(-20, -20, 20, 20);
       pg.addColorStop(0, "#ffffff");
       pg.addColorStop(1, level.accent);
       ctx.fillStyle = pg;
-      ctx.fillRect(-PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
       ctx.strokeStyle = "#0f172a";
       ctx.lineWidth = 3;
-      ctx.strokeRect(-PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(-8, -8, 6, 6);
-      ctx.fillRect(2, -8, 6, 6);
+
+      const s = PLAYER_SIZE / 2;
+      if (level.vehicle === "cube") {
+        ctx.fillRect(-s, -s, PLAYER_SIZE, PLAYER_SIZE);
+        ctx.strokeRect(-s, -s, PLAYER_SIZE, PLAYER_SIZE);
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(-8, -8, 6, 6);
+        ctx.fillRect(2, -8, 6, 6);
+      } else if (level.vehicle === "ship") {
+        // teardrop shape pointing right
+        ctx.beginPath();
+        ctx.moveTo(s, 0);
+        ctx.lineTo(-s, -s * 0.8);
+        ctx.lineTo(-s * 0.7, 0);
+        ctx.lineTo(-s, s * 0.8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // cockpit
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(s * 0.2, -2, 5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (level.vehicle === "ball") {
+        ctx.beginPath();
+        ctx.arc(0, 0, s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-s, 0);
+        ctx.lineTo(s, 0);
+        ctx.moveTo(0, -s);
+        ctx.lineTo(0, s);
+        ctx.stroke();
+      } else if (level.vehicle === "ufo") {
+        // saucer
+        ctx.beginPath();
+        ctx.ellipse(0, 4, s, s * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(0, -4, s * 0.5, Math.PI, 0);
+        ctx.closePath();
+        ctx.fill();
+      } else if (level.vehicle === "wave") {
+        // triangle dart
+        ctx.beginPath();
+        ctx.moveTo(s, 0);
+        ctx.lineTo(-s, -s * 0.7);
+        ctx.lineTo(-s * 0.4, 0);
+        ctx.lineTo(-s, s * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
       ctx.restore();
 
-      // death glow
+      // wave trail
+      if (level.vehicle === "wave" && stateRef.current === "playing") {
+        ctx.strokeStyle = `${level.accent}66`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(PLAYER_X, cy);
+        ctx.lineTo(PLAYER_X - 60, cy + (inputHeld ? 60 : -60));
+        ctx.stroke();
+      }
+
       if (stateRef.current === "dead") {
         ctx.fillStyle = "rgba(239,68,68,0.18)";
         ctx.fillRect(0, 0, w, h);
@@ -369,17 +498,26 @@ function Game({ level, onExit, onWin }: Props) {
       window.removeEventListener("keyup", keyUp);
       canvas.removeEventListener("pointerdown", pointerDown);
       canvas.removeEventListener("pointerup", pointerUp);
-      void jumpHeld;
     };
   }, [level, onExit, onWin]);
 
   const state = stateRef.current;
 
+  const hint =
+    level.vehicle === "cube"
+      ? "TAP / SPACE — JUMP"
+      : level.vehicle === "ship"
+      ? "HOLD — FLY UP · RELEASE — FALL"
+      : level.vehicle === "ball"
+      ? "TAP — FLIP GRAVITY"
+      : level.vehicle === "ufo"
+      ? "TAP IN AIR — FLAP"
+      : "HOLD — UP · RELEASE — DOWN";
+
   return (
     <div className="fixed inset-0 bg-black">
       <canvas ref={canvasRef} className="w-full h-full block touch-none" />
 
-      {/* HUD */}
       <div className="absolute top-0 left-0 right-0 p-4 flex items-center gap-4 text-white">
         <button
           onClick={onExit}
@@ -390,6 +528,9 @@ function Game({ level, onExit, onWin }: Props) {
         <div className="flex-1">
           <div className="text-xs uppercase tracking-widest opacity-70">
             Level {level.index + 1} — {level.name}
+            <span className="ml-2 px-2 py-0.5 rounded bg-white/15 text-[10px]">
+              {VEHICLE_LABELS[level.vehicle]}
+            </span>
           </div>
           <div className="h-2 mt-1 bg-white/10 rounded-full overflow-hidden">
             <div
@@ -436,9 +577,8 @@ function Game({ level, onExit, onWin }: Props) {
         </div>
       )}
 
-      {/* Mobile hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs tracking-widest">
-        SPACE / TAP TO JUMP
+        {hint}
       </div>
     </div>
   );
@@ -457,19 +597,16 @@ export default function GeometryGame() {
     }
   });
 
-  const handleWin = useCallback(
-    (i: number) => {
-      setCompleted((prev) => {
-        const next = new Set(prev);
-        next.add(i);
-        try {
-          localStorage.setItem("gd-completed", JSON.stringify([...next]));
-        } catch {}
-        return next;
-      });
-    },
-    [],
-  );
+  const handleWin = useCallback((i: number) => {
+    setCompleted((prev) => {
+      const next = new Set(prev);
+      next.add(i);
+      try {
+        localStorage.setItem("gd-completed", JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const selectLevel = (i: number) => {
     setSelected(i);
@@ -484,7 +621,6 @@ export default function GeometryGame() {
   if (screen === "intro") {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0a0a12] overflow-hidden">
-        {/* Animated background particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {Array.from({ length: 30 }).map((_, i) => (
             <div
@@ -506,7 +642,8 @@ export default function GeometryGame() {
           <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-[0_0_40px_rgba(34,211,238,0.4)]">
             GEO
             <br />
-            <span className="text-transparent bg-clip-text"
+            <span
+              className="text-transparent bg-clip-text"
               style={{ backgroundImage: "linear-gradient(135deg, #22d3ee, #a855f7)" }}
             >
               RUSH
@@ -514,7 +651,7 @@ export default function GeometryGame() {
           </h1>
 
           <p className="mt-6 text-white/50 tracking-[0.3em] uppercase text-sm md:text-base">
-            11 Levels &middot; Rhythm Runner
+            11 Levels &middot; 5 Vehicles &middot; Rhythm Runner
           </p>
 
           <button
@@ -527,7 +664,7 @@ export default function GeometryGame() {
           </button>
 
           <p className="mt-8 text-white/30 text-xs tracking-widest">
-            SPACE / TAP TO JUMP &middot; ESC TO EXIT
+            CUBE · SHIP · BALL · UFO · WAVE
           </p>
         </div>
       </div>
@@ -560,7 +697,7 @@ export default function GeometryGame() {
             GEO RUSH
           </h1>
           <p className="mt-3 text-muted-foreground tracking-widest text-sm uppercase">
-            11 levels · jump, fly, survive · ~3 min each
+            11 levels · 5 vehicles · ~3 min each
           </p>
         </div>
 
@@ -588,11 +725,9 @@ export default function GeometryGame() {
                     <span className="text-xs tracking-widest opacity-80">
                       LEVEL {String(i + 1).padStart(2, "0")}
                     </span>
-                    {done && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur">
-                        ✓ DONE
-                      </span>
-                    )}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur tracking-widest">
+                      {VEHICLE_LABELS[lv.vehicle]}
+                    </span>
                   </div>
                   <h3 className="mt-3 text-2xl font-black tracking-wider">{lv.name}</h3>
                   <div className="mt-4 flex gap-1">
@@ -609,7 +744,7 @@ export default function GeometryGame() {
                   </div>
                   <div className="mt-4 flex items-center justify-between text-xs tracking-widest opacity-80">
                     <span>SPEED {Math.round(lv.speed)}</span>
-                    <span>~3:00</span>
+                    <span>{done ? "✓ DONE" : "~3:00"}</span>
                   </div>
                 </div>
               </button>
@@ -618,7 +753,7 @@ export default function GeometryGame() {
         </div>
 
         <div className="mt-12 text-center text-xs text-muted-foreground tracking-widest">
-          SPACE / W / ↑ / TAP TO JUMP — ESC TO EXIT — HOLD ANY KEY ON DEATH TO RETRY
+          SPACE / W / ↑ / TAP — ACTION · ESC — EXIT · HOLD ON DEATH TO RETRY
         </div>
       </div>
     </div>
