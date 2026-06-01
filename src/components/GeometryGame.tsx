@@ -516,13 +516,13 @@ function Game({ level, onExit, onWin }: Props) {
   const state = stateRef.current;
 
   const hint =
-    vehicle === "cube"
+    currentVehicle === "cube"
       ? "TAP / SPACE — JUMP"
-      : vehicle === "ship"
+      : currentVehicle === "ship"
       ? "HOLD — FLY UP · RELEASE — FALL"
-      : vehicle === "ball"
+      : currentVehicle === "ball"
       ? "TAP — FLIP GRAVITY"
-      : vehicle === "ufo"
+      : currentVehicle === "ufo"
       ? "TAP IN AIR — FLAP"
       : "HOLD — UP · RELEASE — DOWN";
 
@@ -541,7 +541,7 @@ function Game({ level, onExit, onWin }: Props) {
           <div className="text-xs uppercase tracking-widest opacity-70">
             Level {level.index + 1} — {level.name}
             <span className="ml-2 px-2 py-0.5 rounded bg-white/15 text-[10px]">
-              {VEHICLE_LABELS[vehicle]}
+              {VEHICLE_LABELS[currentVehicle]}
             </span>
           </div>
           <div className="h-2 mt-1 bg-white/10 rounded-full overflow-hidden">
