@@ -762,7 +762,7 @@ export default function GeometryGame() {
           </button>
 
           <p className="mt-8 text-white/30 text-xs tracking-widest">
-            CUBE · SHIP · BALL · UFO · WAVE
+            GEM · ROCKET · STAR · RHOMB · BOLT
           </p>
         </div>
       </div>
