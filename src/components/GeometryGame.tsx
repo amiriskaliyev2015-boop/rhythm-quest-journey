@@ -571,7 +571,7 @@ export default function GeometryGame() {
             return (
               <button
                 key={i}
-                onClick={() => setSelected(i)}
+                onClick={() => selectLevel(i)}
                 className="group relative overflow-hidden rounded-2xl p-5 text-left border border-white/10 hover:border-white/30 transition transform hover:-translate-y-1 hover:shadow-2xl"
                 style={{
                   background: `linear-gradient(135deg, ${lv.bgFrom}, ${lv.bgTo})`,
