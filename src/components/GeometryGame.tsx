@@ -467,152 +467,105 @@ function Game({ level, onExit, onWin }: Props) {
       ctx.lineWidth = 3;
 
       const s = PLAYER_SIZE / 2;
+      // Shared shadow + gradient helper
+      const pgrad = ctx.createRadialGradient(-s * 0.4, -s * 0.5, 2, 0, 0, s * 1.8);
+      pgrad.addColorStop(0, "#ffffff");
+      pgrad.addColorStop(0.3, level.accent);
+      pgrad.addColorStop(1, "#0b1220");
+      ctx.fillStyle = pgrad;
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = "rgba(0,0,0,0.4)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 3;
+
       if (vehicle === "cube") {
-        // Drop shadow under the cube (in cube's local rotated space — subtle)
-        ctx.save();
-        ctx.shadowColor = "rgba(0,0,0,0.45)";
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetY = 4;
-        // Rounded body with metallic radial gradient
-        const r = 6;
-        const bodyGrad = ctx.createRadialGradient(-s * 0.4, -s * 0.5, 2, 0, 0, s * 1.6);
-        bodyGrad.addColorStop(0, "#ffffff");
-        bodyGrad.addColorStop(0.25, level.accent);
-        bodyGrad.addColorStop(0.75, "#1f2937");
-        bodyGrad.addColorStop(1, "#0b1220");
-        ctx.fillStyle = bodyGrad;
+        // HEXAGONAL GEM
         ctx.beginPath();
-        ctx.moveTo(-s + r, -s);
-        ctx.lineTo(s - r, -s);
-        ctx.quadraticCurveTo(s, -s, s, -s + r);
-        ctx.lineTo(s, s - r);
-        ctx.quadraticCurveTo(s, s, s - r, s);
-        ctx.lineTo(-s + r, s);
-        ctx.quadraticCurveTo(-s, s, -s, s - r);
-        ctx.lineTo(-s, -s + r);
-        ctx.quadraticCurveTo(-s, -s, -s + r, -s);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-
-        // Inner bevel highlight (top-left)
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(-s + 6, -s + 2);
-        ctx.lineTo(s - 6, -s + 2);
-        ctx.strokeStyle = "rgba(255,255,255,0.55)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(-s + 2, -s + 6);
-        ctx.lineTo(-s + 2, s - 6);
-        ctx.strokeStyle = "rgba(255,255,255,0.35)";
-        ctx.stroke();
-        // bottom-right shadow edge
-        ctx.beginPath();
-        ctx.moveTo(s - 2, -s + 6);
-        ctx.lineTo(s - 2, s - 6);
-        ctx.strokeStyle = "rgba(0,0,0,0.35)";
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(-s + 6, s - 2);
-        ctx.lineTo(s - 6, s - 2);
-        ctx.stroke();
-        ctx.restore();
-
-        // Outer outline
-        ctx.strokeStyle = "#0f172a";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(-s + r, -s);
-        ctx.lineTo(s - r, -s);
-        ctx.quadraticCurveTo(s, -s, s, -s + r);
-        ctx.lineTo(s, s - r);
-        ctx.quadraticCurveTo(s, s, s - r, s);
-        ctx.lineTo(-s + r, s);
-        ctx.quadraticCurveTo(-s, s, -s, s - r);
-        ctx.lineTo(-s, -s + r);
-        ctx.quadraticCurveTo(-s, -s, -s + r, -s);
-        ctx.closePath();
-        ctx.stroke();
-
-        // Rivets in 4 corners
-        ctx.fillStyle = "#0f172a";
-        const riv = 2;
-        for (const [rx, ry] of [[-s + 5, -s + 5],[s - 5, -s + 5],[-s + 5, s - 5],[s - 5, s - 5]] as const) {
-          ctx.beginPath();
-          ctx.arc(rx, ry, riv, 0, Math.PI * 2);
-          ctx.fill();
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i - Math.PI / 2;
+          const x = Math.cos(a) * s;
+          const y = Math.sin(a) * s;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
-
-        // Glossy face highlight
-        const gloss = ctx.createLinearGradient(0, -s, 0, 0);
-        gloss.addColorStop(0, "rgba(255,255,255,0.55)");
-        gloss.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = gloss;
-        ctx.beginPath();
-        ctx.moveTo(-s + 6, -s + 4);
-        ctx.lineTo(s - 6, -s + 4);
-        ctx.lineTo(s - 10, -2);
-        ctx.lineTo(-s + 10, -2);
         ctx.closePath();
         ctx.fill();
-
-        // Eyes (visor)
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(-9, -4, 7, 7);
-        ctx.fillRect(2, -4, 7, 7);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(-7, -3, 2, 2);
-        ctx.fillRect(4, -3, 2, 2);
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+        // inner facet lines
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i - Math.PI / 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a) * s * 0.85, Math.sin(a) * s * 0.85);
+          ctx.stroke();
+        }
       } else if (vehicle === "ship") {
-        // teardrop shape pointing right
+        // PENTAGON ROCKET pointing right
         ctx.beginPath();
         ctx.moveTo(s, 0);
-        ctx.lineTo(-s, -s * 0.8);
-        ctx.lineTo(-s * 0.7, 0);
-        ctx.lineTo(-s, s * 0.8);
+        ctx.lineTo(s * 0.2, -s * 0.9);
+        ctx.lineTo(-s, -s * 0.6);
+        ctx.lineTo(-s, s * 0.6);
+        ctx.lineTo(s * 0.2, s * 0.9);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.stroke();
-        // cockpit
         ctx.fillStyle = "#0f172a";
         ctx.beginPath();
-        ctx.arc(s * 0.2, -2, 5, 0, Math.PI * 2);
+        ctx.arc(s * 0.15, 0, 5, 0, Math.PI * 2);
         ctx.fill();
       } else if (vehicle === "ball") {
+        // 5-POINT STAR
         ctx.beginPath();
-        ctx.arc(0, 0, s, 0, Math.PI * 2);
+        for (let i = 0; i < 10; i++) {
+          const r = i % 2 === 0 ? s : s * 0.45;
+          const a = (Math.PI / 5) * i - Math.PI / 2;
+          const x = Math.cos(a) * r;
+          const y = Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.stroke();
-        ctx.strokeStyle = "#0f172a";
-        ctx.lineWidth = 2;
+      } else if (vehicle === "ufo") {
+        // DIAMOND (rhombus)
+        ctx.beginPath();
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s, 0);
+        ctx.lineTo(0, s);
+        ctx.lineTo(-s, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+        // crossbar facets
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(-s, 0);
         ctx.lineTo(s, 0);
         ctx.moveTo(0, -s);
         ctx.lineTo(0, s);
         ctx.stroke();
-      } else if (vehicle === "ufo") {
-        // saucer
-        ctx.beginPath();
-        ctx.ellipse(0, 4, s, s * 0.45, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = "#0f172a";
-        ctx.beginPath();
-        ctx.arc(0, -4, s * 0.5, Math.PI, 0);
-        ctx.closePath();
-        ctx.fill();
       } else if (vehicle === "wave") {
-        // triangle dart
+        // LIGHTNING BOLT
         ctx.beginPath();
-        ctx.moveTo(s, 0);
-        ctx.lineTo(-s, -s * 0.7);
-        ctx.lineTo(-s * 0.4, 0);
-        ctx.lineTo(-s, s * 0.7);
+        ctx.moveTo(-s * 0.2, -s);
+        ctx.lineTo(s * 0.6, -s * 0.2);
+        ctx.lineTo(s * 0.05, -s * 0.05);
+        ctx.lineTo(s * 0.5, s);
+        ctx.lineTo(-s * 0.6, s * 0.1);
+        ctx.lineTo(-s * 0.05, 0);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.stroke();
       }
       ctx.restore();
