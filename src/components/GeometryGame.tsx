@@ -27,6 +27,7 @@ function Game({ level, onExit, onWin }: Props) {
   const [, force] = useState(0);
   const [progress, setProgress] = useState(0);
   const [attempts, setAttempts] = useState(1);
+  const [currentVehicle, setCurrentVehicle] = useState<Vehicle>(level.startingVehicle);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
