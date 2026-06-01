@@ -1054,7 +1054,7 @@ export default function GeometryGame() {
           </h1>
 
           <p className="mt-6 text-white/50 tracking-[0.3em] uppercase text-sm md:text-base">
-            25 Levels &middot; 5 Vehicles &middot; Rhythm Runner
+            26 Levels &middot; 5 Vehicles &middot; Rhythm Runner
           </p>
 
           <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
