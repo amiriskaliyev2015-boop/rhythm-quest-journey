@@ -327,9 +327,9 @@ function Game({ level, onExit, onWin }: Props) {
 
       // ----- RENDER -----
       const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, level.bgFrom);
-      grad.addColorStop(1, level.bgTo);
-      ctx.fillStyle = grad;
+      pgrad.addColorStop(0, level.bgFrom);
+      pgrad.addColorStop(1, level.bgTo);
+      ctx.fillStyle = pgrad;
       ctx.fillRect(0, 0, w, h);
 
       // parallax stars
@@ -468,11 +468,11 @@ function Game({ level, onExit, onWin }: Props) {
 
       const s = PLAYER_SIZE / 2;
       // Shared shadow + gradient helper
-      const grad = ctx.createRadialGradient(-s * 0.4, -s * 0.5, 2, 0, 0, s * 1.8);
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.3, level.accent);
-      grad.addColorStop(1, "#0b1220");
-      ctx.fillStyle = grad;
+      const pgrad = ctx.createRadialGradient(-s * 0.4, -s * 0.5, 2, 0, 0, s * 1.8);
+      pgrad.addColorStop(0, "#ffffff");
+      pgrad.addColorStop(0.3, level.accent);
+      pgrad.addColorStop(1, "#0b1220");
+      ctx.fillStyle = pgrad;
       ctx.strokeStyle = "#0f172a";
       ctx.lineWidth = 2.5;
       ctx.shadowColor = "rgba(0,0,0,0.4)";
