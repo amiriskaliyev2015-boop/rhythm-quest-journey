@@ -91,6 +91,7 @@ const NAMES = [
   "Chrono Shatter",
   "Singularity Collapse",
   "Absolute Zero",
+  "Spike Hell",
 ];
 
 const VEHICLES: Vehicle[] = [
