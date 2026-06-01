@@ -123,15 +123,18 @@ function genSegment(
         x += gap;
       }
     } else if (vehicle === "ship") {
-      if (roll < 0.5) {
-        out.push({ type: "spike", x, w: 34, h: 34 });
-        x += 34 + gap * 0.7;
-      } else if (roll < 0.85) {
+      // Ship/rocket: keep floor clear so the player can skim along the ground.
+      if (roll < 0.55) {
         out.push({ type: "spike", x, w: 34, h: 34, flip: true });
         x += 34 + gap * 0.7;
-      } else {
-        out.push({ type: "saw", x, y: 80 + rand() * 200, r: 22 });
+      } else if (roll < 0.8) {
+        out.push({ type: "saw", x, y: 120 + rand() * 180, r: 22 });
         x += 50 + gap;
+      } else {
+        // ceiling laser + mid saw combo
+        out.push({ type: "spike", x, w: 34, h: 34, flip: true });
+        out.push({ type: "saw", x: x + 70, y: 80 + rand() * 120, r: 20 });
+        x += 120 + gap;
       }
     } else if (vehicle === "ball") {
       if (roll < 0.45) {
