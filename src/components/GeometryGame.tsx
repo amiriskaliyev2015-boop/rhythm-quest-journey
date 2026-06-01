@@ -7,9 +7,41 @@ const PLAYER_X = 140;
 
 type GameState = "menu" | "playing" | "dead" | "won";
 
+export interface Skin {
+  id: string;
+  name: string;
+  tagline: string;
+  primary: string;   // body color
+  secondary: string; // highlight
+  glow: string;      // outer glow / shadow
+  price: number;
+  rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "MYTHIC";
+}
+
+export const SKINS: Skin[] = [
+  { id: "default",  name: "Prism",      tagline: "Default refraction",         primary: "#22d3ee", secondary: "#ffffff", glow: "#22d3ee", price: 0,    rarity: "COMMON" },
+  { id: "ember",    name: "Ember",      tagline: "Forged in molten neon",      primary: "#f97316", secondary: "#fde047", glow: "#ef4444", price: 350,  rarity: "COMMON" },
+  { id: "toxic",    name: "Toxic",      tagline: "Bio-luminescent ooze",       primary: "#84cc16", secondary: "#bef264", glow: "#22c55e", price: 600,  rarity: "RARE" },
+  { id: "abyss",    name: "Abyss",      tagline: "Bottled deep-sea pressure",  primary: "#0ea5e9", secondary: "#67e8f9", glow: "#1e3a8a", price: 900,  rarity: "RARE" },
+  { id: "rose",     name: "Rose Quartz",tagline: "Crystalline pink halo",      primary: "#ec4899", secondary: "#fbcfe8", glow: "#f43f5e", price: 1400, rarity: "EPIC" },
+  { id: "void",     name: "Void",       tagline: "Light bends around it",      primary: "#1f2937", secondary: "#a855f7", glow: "#a855f7", price: 2200, rarity: "EPIC" },
+  { id: "solar",    name: "Solar Flare",tagline: "Plasma forged outside time", primary: "#facc15", secondary: "#ffffff", glow: "#f97316", price: 3500, rarity: "LEGENDARY" },
+  { id: "aurora",   name: "Aurora",     tagline: "Polar sky on glass",         primary: "#a855f7", secondary: "#22d3ee", glow: "#ec4899", price: 5500, rarity: "LEGENDARY" },
+  { id: "obsidian", name: "Obsidian",   tagline: "Edge of the singularity",    primary: "#0b1220", secondary: "#f5f5f5", glow: "#ffffff", price: 9000, rarity: "MYTHIC" },
+];
+
+const RARITY_COLOR: Record<Skin["rarity"], string> = {
+  COMMON: "#94a3b8",
+  RARE: "#22d3ee",
+  EPIC: "#a855f7",
+  LEGENDARY: "#facc15",
+  MYTHIC: "#f43f5e",
+};
+
 interface Props {
   level: Level;
   bestAttempts: number | null;
+  skin: Skin;
   onExit: () => void;
   onWin: (info: { attempts: number; reward: number; isNewRecord: boolean }) => void;
 }
@@ -32,7 +64,7 @@ const VEHICLE_LABELS: Record<Vehicle, string> = {
   wave: "BOLT",
 };
 
-function Game({ level, bestAttempts, onExit, onWin }: Props) {
+function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
   const [winInfo, setWinInfo] = useState<{ reward: number; isNewRecord: boolean } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -509,13 +541,13 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
       const s = PLAYER_SIZE / 2;
       // Shared shadow + gradient helper
       const pgrad = ctx.createRadialGradient(-s * 0.4, -s * 0.5, 2, 0, 0, s * 1.8);
-      pgrad.addColorStop(0, "#ffffff");
-      pgrad.addColorStop(0.3, level.accent);
+      pgrad.addColorStop(0, skin.secondary);
+      pgrad.addColorStop(0.3, skin.primary);
       pgrad.addColorStop(1, "#0b1220");
       ctx.fillStyle = pgrad;
       ctx.strokeStyle = "#0f172a";
       ctx.lineWidth = 2.5;
-      ctx.shadowColor = "rgba(0,0,0,0.4)";
+      ctx.shadowColor = skin.glow;
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 3;
 
@@ -637,7 +669,7 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
       canvas.removeEventListener("pointerdown", pointerDown);
       canvas.removeEventListener("pointerup", pointerUp);
     };
-  }, [level, onExit, onWin]);
+  }, [level, skin, onExit, onWin]);
 
   const state = stateRef.current;
 
@@ -741,34 +773,59 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
 }
 
 export default function GeometryGame() {
-  const [screen, setScreen] = useState<"intro" | "levels" | "playing">("intro");
+  const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
-  const [completed, setCompleted] = useState<Set<number>>(() => {
-    if (typeof window === "undefined") return new Set();
+  // SSR-safe defaults — hydrate from localStorage in an effect to avoid mismatch.
+  const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>({});
+  const [prisms, setPrisms] = useState<number>(0);
+  const [ownedSkins, setOwnedSkins] = useState<Set<string>>(new Set(["default"]));
+  const [equippedSkinId, setEquippedSkinId] = useState<string>("default");
+  const [shopMsg, setShopMsg] = useState<string | null>(null);
+
+  useEffect(() => {
     try {
-      const raw = localStorage.getItem("gd-completed");
-      return new Set(raw ? (JSON.parse(raw) as number[]) : []);
-    } catch {
-      return new Set();
+      const c = localStorage.getItem("gd-completed");
+      if (c) setCompleted(new Set(JSON.parse(c) as number[]));
+      const b = localStorage.getItem("gd-best");
+      if (b) setBestAttempts(JSON.parse(b) as Record<number, number>);
+      const p = localStorage.getItem("gd-prisms");
+      if (p) setPrisms(Number(p) || 0);
+      const o = localStorage.getItem("gd-skins");
+      if (o) setOwnedSkins(new Set(["default", ...(JSON.parse(o) as string[])]));
+      const e = localStorage.getItem("gd-equipped");
+      if (e) setEquippedSkinId(e);
+    } catch {}
+  }, []);
+
+  const equippedSkin = SKINS.find((s) => s.id === equippedSkinId) ?? SKINS[0];
+
+  const buySkin = (id: string) => {
+    const skin = SKINS.find((s) => s.id === id);
+    if (!skin) return;
+    if (ownedSkins.has(id)) {
+      setEquippedSkinId(id);
+      try { localStorage.setItem("gd-equipped", id); } catch {}
+      setShopMsg(`EQUIPPED · ${skin.name.toUpperCase()}`);
+      return;
     }
-  });
-  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>(() => {
-    if (typeof window === "undefined") return {};
+    if (prisms < skin.price) {
+      setShopMsg(`NEED ${skin.price - prisms} MORE ◆`);
+      return;
+    }
+    const nextPrisms = prisms - skin.price;
+    const nextOwned = new Set(ownedSkins);
+    nextOwned.add(id);
+    setPrisms(nextPrisms);
+    setOwnedSkins(nextOwned);
+    setEquippedSkinId(id);
     try {
-      const raw = localStorage.getItem("gd-best");
-      return raw ? (JSON.parse(raw) as Record<number, number>) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [prisms, setPrisms] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      return Number(localStorage.getItem("gd-prisms") || 0) || 0;
-    } catch {
-      return 0;
-    }
-  });
+      localStorage.setItem("gd-prisms", String(nextPrisms));
+      localStorage.setItem("gd-skins", JSON.stringify([...nextOwned].filter((x) => x !== "default")));
+      localStorage.setItem("gd-equipped", id);
+    } catch {}
+    setShopMsg(`UNLOCKED · ${skin.name.toUpperCase()}`);
+  };
 
   const handleWin = useCallback(
     (i: number, info: { attempts: number; reward: number; isNewRecord: boolean }) => {
@@ -810,6 +867,96 @@ export default function GeometryGame() {
     setScreen("levels");
   };
 
+  if (screen === "shop") {
+    return (
+      <div className="min-h-screen px-4 py-12 md:py-16 bg-[#070710]">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+            <button
+              onClick={() => { setShopMsg(null); setScreen("intro"); }}
+              className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm font-bold tracking-widest"
+            >
+              ← BACK
+            </button>
+            <h2
+              className="text-4xl md:text-5xl font-black tracking-[0.2em] bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(120deg, #22d3ee, #a855f7, #f472b6)" }}
+            >
+              SKIN VAULT
+            </h2>
+            <div className="px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
+              <span className="text-cyan-300">◆</span> {prisms}
+            </div>
+          </div>
+          {shopMsg && (
+            <div className="mb-6 text-center text-white tracking-[0.3em] text-sm font-bold animate-pulse">
+              {shopMsg}
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {SKINS.map((s) => {
+              const owned = ownedSkins.has(s.id);
+              const equipped = equippedSkinId === s.id;
+              const canAfford = prisms >= s.price;
+              return (
+                <div
+                  key={s.id}
+                  className="relative overflow-hidden rounded-2xl p-5 border text-white"
+                  style={{
+                    borderColor: equipped ? s.glow : "rgba(255,255,255,0.1)",
+                    background: `linear-gradient(155deg, ${s.primary}33, ${s.glow}22 60%, #0a0a14)`,
+                    boxShadow: equipped ? `0 0 40px -10px ${s.glow}` : undefined,
+                  }}
+                >
+                  <div className="flex items-center justify-between text-[10px] tracking-[0.25em] font-bold">
+                    <span style={{ color: RARITY_COLOR[s.rarity] }}>{s.rarity}</span>
+                    {equipped && <span className="text-white/80">EQUIPPED</span>}
+                  </div>
+                  <div className="my-6 flex justify-center">
+                    <div
+                      className="w-20 h-20 rotate-45 rounded-md"
+                      style={{
+                        background: `radial-gradient(circle at 30% 30%, ${s.secondary}, ${s.primary} 55%, #0b1220)`,
+                        boxShadow: `0 0 30px ${s.glow}`,
+                      }}
+                    />
+                  </div>
+                  <h3 className="text-xl font-black tracking-widest">{s.name.toUpperCase()}</h3>
+                  <p className="text-xs text-white/60 tracking-wider mt-1">{s.tagline}</p>
+                  <button
+                    onClick={() => buySkin(s.id)}
+                    disabled={!owned && !canAfford}
+                    className="mt-5 w-full px-4 py-3 rounded-lg font-black tracking-widest text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: equipped
+                        ? "rgba(255,255,255,0.1)"
+                        : owned
+                        ? "#ffffff"
+                        : `linear-gradient(90deg, ${s.primary}, ${s.glow})`,
+                      color: equipped ? "#ffffff" : owned ? "#000000" : "#ffffff",
+                    }}
+                  >
+                    {equipped
+                      ? "EQUIPPED"
+                      : owned
+                      ? "EQUIP"
+                      : s.price === 0
+                      ? "FREE"
+                      : `◆ ${s.price.toLocaleString()}`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-10 text-center text-white/40 text-xs tracking-widest">
+            EARN ◆ PRISMS BY CLEARING LEVELS · BIGGER REWARDS FOR FEWER ATTEMPTS
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
   if (screen === "intro") {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0a0a12] overflow-hidden">
@@ -846,17 +993,27 @@ export default function GeometryGame() {
             15 Levels &middot; 5 Vehicles &middot; Rhythm Runner
           </p>
 
-          <button
-            onClick={() => setScreen("levels")}
-            className="mt-12 px-16 py-5 text-2xl font-black tracking-[0.2em] text-black bg-white rounded-full
-                       hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] active:scale-95
-                       transition-all duration-200"
-          >
-            PLAY
-          </button>
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={() => setScreen("levels")}
+              className="px-14 py-5 text-2xl font-black tracking-[0.2em] text-black bg-white rounded-full
+                         hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] active:scale-95
+                         transition-all duration-200"
+            >
+              PLAY
+            </button>
+            <button
+              onClick={() => { setShopMsg(null); setScreen("shop"); }}
+              className="px-10 py-5 text-xl font-black tracking-[0.2em] text-white rounded-full border-2 border-white/30
+                         hover:border-white/70 hover:scale-105 active:scale-95 transition-all duration-200
+                         bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10"
+            >
+              ◆ SHOP
+            </button>
+          </div>
 
-          <p className="mt-8 text-white/30 text-xs tracking-widest">
-            ◆ {prisms} PRISMS
+          <p className="mt-8 text-white/40 text-xs tracking-widest">
+            ◆ {prisms.toLocaleString()} PRISMS · {ownedSkins.size}/{SKINS.length} SKINS
           </p>
           <p className="mt-2 text-white/30 text-xs tracking-widest">
             GEM · ROCKET · STAR · RHOMB · BOLT
@@ -873,6 +1030,7 @@ export default function GeometryGame() {
         key={selected}
         level={level}
         bestAttempts={bestAttempts[selected] ?? null}
+        skin={equippedSkin}
         onExit={goToMenu}
         onWin={(info) => handleWin(selected, info)}
       />
@@ -896,8 +1054,14 @@ export default function GeometryGame() {
           <p className="mt-3 text-muted-foreground tracking-widest text-sm uppercase">
             15 levels · 5 shapes · neon shape-runner
           </p>
-          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
-            <span className="text-cyan-300">◆</span> {prisms} PRISMS
+          <div className="mt-4 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
+            <span className="text-cyan-300">◆</span> {prisms.toLocaleString()} PRISMS
+            <button
+              onClick={() => { setShopMsg(null); setScreen("shop"); }}
+              className="ml-2 px-3 py-1 rounded-full bg-white text-black text-xs tracking-widest hover:scale-105 transition"
+            >
+              SHOP
+            </button>
           </div>
 
         </div>
