@@ -9,9 +9,20 @@ type GameState = "menu" | "playing" | "dead" | "won";
 
 interface Props {
   level: Level;
+  bestAttempts: number | null;
   onExit: () => void;
-  onWin: () => void;
+  onWin: (info: { attempts: number; reward: number; isNewRecord: boolean }) => void;
 }
+
+const BASE_REWARD = 50;
+const RECORD_BONUS = 100;
+const computeReward = (levelIndex: number, attempts: number, prevBest: number | null) => {
+  const base = BASE_REWARD * (levelIndex + 1);
+  const isNewRecord = prevBest === null || attempts < prevBest;
+  const bonus = isNewRecord ? RECORD_BONUS * (levelIndex + 1) : 0;
+  return { reward: base + bonus, isNewRecord };
+};
+
 
 const VEHICLE_LABELS: Record<Vehicle, string> = {
   cube: "GEM",
@@ -21,12 +32,20 @@ const VEHICLE_LABELS: Record<Vehicle, string> = {
   wave: "BOLT",
 };
 
-function Game({ level, onExit, onWin }: Props) {
+function Game({ level, bestAttempts, onExit, onWin }: Props) {
+  const [winInfo, setWinInfo] = useState<{ reward: number; isNewRecord: boolean } | null>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState>("playing");
   const [, force] = useState(0);
   const [progress, setProgress] = useState(0);
   const [attempts, setAttempts] = useState(1);
+  const attemptsRef = useRef(1);
+  const bumpAttempts = useCallback(() => {
+    attemptsRef.current += 1;
+    setAttempts(attemptsRef.current);
+  }, []);
+
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle>(level.startingVehicle);
 
   useEffect(() => {
@@ -98,14 +117,18 @@ function Game({ level, onExit, onWin }: Props) {
     const win = () => {
       if (stateRef.current !== "playing") return;
       stateRef.current = "won";
+      const a = attemptsRef.current;
+      const { reward, isNewRecord } = computeReward(level.index, a, bestAttempts);
+      setWinInfo({ reward, isNewRecord });
       force((n) => n + 1);
-      onWin();
+      onWin({ attempts: a, reward, isNewRecord });
     };
+
 
     const handlePress = () => {
       inputHeld = true;
       if (stateRef.current === "dead") {
-        setAttempts((a) => a + 1);
+        bumpAttempts();
         reset();
         return;
       }
@@ -682,6 +705,23 @@ function Game({ level, onExit, onWin }: Props) {
             <div className="text-6xl font-black tracking-widest" style={{ color: level.accent }}>
               LEVEL COMPLETE
             </div>
+            {winInfo && (
+              <div className="mt-4 space-y-1">
+                {winInfo.isNewRecord && (
+                  <div className="text-yellow-300 font-bold tracking-[0.3em] text-sm animate-pulse">
+                    ★ NEW RECORD · {attempts} {attempts === 1 ? "ATTEMPT" : "ATTEMPTS"} ★
+                  </div>
+                )}
+                <div className="text-white text-2xl font-black tracking-widest">
+                  +{winInfo.reward} ◆ PRISMS
+                </div>
+                {bestAttempts !== null && !winInfo.isNewRecord && (
+                  <div className="text-white/60 text-xs tracking-widest">
+                    BEST: {bestAttempts} · BEAT IT FOR BONUS
+                  </div>
+                )}
+              </div>
+            )}
             <button
               onClick={onExit}
               className="mt-6 px-6 py-3 rounded-lg bg-white text-black font-bold tracking-widest hover:scale-105 transition"
@@ -691,6 +731,7 @@ function Game({ level, onExit, onWin }: Props) {
           </div>
         </div>
       )}
+
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs tracking-widest">
         {hint}
@@ -711,17 +752,53 @@ export default function GeometryGame() {
       return new Set();
     }
   });
+  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem("gd-best");
+      return raw ? (JSON.parse(raw) as Record<number, number>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [prisms, setPrisms] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      return Number(localStorage.getItem("gd-prisms") || 0) || 0;
+    } catch {
+      return 0;
+    }
+  });
 
-  const handleWin = useCallback((i: number) => {
-    setCompleted((prev) => {
-      const next = new Set(prev);
-      next.add(i);
-      try {
-        localStorage.setItem("gd-completed", JSON.stringify([...next]));
-      } catch {}
-      return next;
-    });
-  }, []);
+  const handleWin = useCallback(
+    (i: number, info: { attempts: number; reward: number; isNewRecord: boolean }) => {
+      setCompleted((prev) => {
+        const next = new Set(prev);
+        next.add(i);
+        try {
+          localStorage.setItem("gd-completed", JSON.stringify([...next]));
+        } catch {}
+        return next;
+      });
+      if (info.isNewRecord) {
+        setBestAttempts((prev) => {
+          const next = { ...prev, [i]: info.attempts };
+          try {
+            localStorage.setItem("gd-best", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+      }
+      setPrisms((p) => {
+        const next = p + info.reward;
+        try {
+          localStorage.setItem("gd-prisms", String(next));
+        } catch {}
+        return next;
+      });
+    },
+    [],
+  );
 
   const selectLevel = (i: number) => {
     setSelected(i);
@@ -779,6 +856,9 @@ export default function GeometryGame() {
           </button>
 
           <p className="mt-8 text-white/30 text-xs tracking-widest">
+            ◆ {prisms} PRISMS
+          </p>
+          <p className="mt-2 text-white/30 text-xs tracking-widest">
             GEM · ROCKET · STAR · RHOMB · BOLT
           </p>
         </div>
@@ -792,11 +872,13 @@ export default function GeometryGame() {
       <Game
         key={selected}
         level={level}
+        bestAttempts={bestAttempts[selected] ?? null}
         onExit={goToMenu}
-        onWin={() => handleWin(selected)}
+        onWin={(info) => handleWin(selected, info)}
       />
     );
   }
+
 
   return (
     <div className="min-h-screen px-4 py-12 md:py-20">
@@ -814,6 +896,10 @@ export default function GeometryGame() {
           <p className="mt-3 text-muted-foreground tracking-widest text-sm uppercase">
             15 levels · 5 shapes · neon shape-runner
           </p>
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
+            <span className="text-cyan-300">◆</span> {prisms} PRISMS
+          </div>
+
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -861,6 +947,12 @@ export default function GeometryGame() {
                     <span>SPEED {Math.round(lv.speed)}</span>
                     <span>{done ? "✓ DONE" : "~3:00"}</span>
                   </div>
+                  {bestAttempts[i] !== undefined && (
+                    <div className="mt-2 text-[10px] tracking-widest text-white/70">
+                      BEST · {bestAttempts[i]} {bestAttempts[i] === 1 ? "ATTEMPT" : "ATTEMPTS"}
+                    </div>
+                  )}
+
                 </div>
               </button>
             );
