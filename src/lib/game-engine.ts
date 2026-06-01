@@ -180,7 +180,7 @@ export function buildLevel(idx: number): Level {
   const speed = 320 + idx * 22;
   const gravity = 2400 + idx * 70;
   const jump = 780 + idx * 14;
-  const durationSec = 180;
+  const durationSec = 90;
   const length = speed * durationSec;
   const startingVehicle = VEHICLES[idx] ?? "cube";
 
