@@ -468,11 +468,103 @@ function Game({ level, onExit, onWin }: Props) {
 
       const s = PLAYER_SIZE / 2;
       if (vehicle === "cube") {
-        ctx.fillRect(-s, -s, PLAYER_SIZE, PLAYER_SIZE);
-        ctx.strokeRect(-s, -s, PLAYER_SIZE, PLAYER_SIZE);
+        // Drop shadow under the cube (in cube's local rotated space — subtle)
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.45)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+        // Rounded body with metallic radial gradient
+        const r = 6;
+        const bodyGrad = ctx.createRadialGradient(-s * 0.4, -s * 0.5, 2, 0, 0, s * 1.6);
+        bodyGrad.addColorStop(0, "#ffffff");
+        bodyGrad.addColorStop(0.25, level.accent);
+        bodyGrad.addColorStop(0.75, "#1f2937");
+        bodyGrad.addColorStop(1, "#0b1220");
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.moveTo(-s + r, -s);
+        ctx.lineTo(s - r, -s);
+        ctx.quadraticCurveTo(s, -s, s, -s + r);
+        ctx.lineTo(s, s - r);
+        ctx.quadraticCurveTo(s, s, s - r, s);
+        ctx.lineTo(-s + r, s);
+        ctx.quadraticCurveTo(-s, s, -s, s - r);
+        ctx.lineTo(-s, -s + r);
+        ctx.quadraticCurveTo(-s, -s, -s + r, -s);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Inner bevel highlight (top-left)
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(-s + 6, -s + 2);
+        ctx.lineTo(s - 6, -s + 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-s + 2, -s + 6);
+        ctx.lineTo(-s + 2, s - 6);
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.stroke();
+        // bottom-right shadow edge
+        ctx.beginPath();
+        ctx.moveTo(s - 2, -s + 6);
+        ctx.lineTo(s - 2, s - 6);
+        ctx.strokeStyle = "rgba(0,0,0,0.35)";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-s + 6, s - 2);
+        ctx.lineTo(s - 6, s - 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Outer outline
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-s + r, -s);
+        ctx.lineTo(s - r, -s);
+        ctx.quadraticCurveTo(s, -s, s, -s + r);
+        ctx.lineTo(s, s - r);
+        ctx.quadraticCurveTo(s, s, s - r, s);
+        ctx.lineTo(-s + r, s);
+        ctx.quadraticCurveTo(-s, s, -s, s - r);
+        ctx.lineTo(-s, -s + r);
+        ctx.quadraticCurveTo(-s, -s, -s + r, -s);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Rivets in 4 corners
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(-8, -8, 6, 6);
-        ctx.fillRect(2, -8, 6, 6);
+        const riv = 2;
+        for (const [rx, ry] of [[-s + 5, -s + 5],[s - 5, -s + 5],[-s + 5, s - 5],[s - 5, s - 5]] as const) {
+          ctx.beginPath();
+          ctx.arc(rx, ry, riv, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Glossy face highlight
+        const gloss = ctx.createLinearGradient(0, -s, 0, 0);
+        gloss.addColorStop(0, "rgba(255,255,255,0.55)");
+        gloss.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = gloss;
+        ctx.beginPath();
+        ctx.moveTo(-s + 6, -s + 4);
+        ctx.lineTo(s - 6, -s + 4);
+        ctx.lineTo(s - 10, -2);
+        ctx.lineTo(-s + 10, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eyes (visor)
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(-9, -4, 7, 7);
+        ctx.fillRect(2, -4, 7, 7);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(-7, -3, 2, 2);
+        ctx.fillRect(4, -3, 2, 2);
       } else if (vehicle === "ship") {
         // teardrop shape pointing right
         ctx.beginPath();
