@@ -146,8 +146,8 @@ function genSegment(
 ) {
   let x = startX;
   const f = FLAVORS[idx] ?? FLAVORS[FLAVORS.length - 1];
-  const baseMinGap = Math.max(140, 320 - idx * 18);
-  const baseMaxGap = Math.max(baseMinGap + 80, 520 - idx * 22);
+  const baseMinGap = Math.max(200, 420 - idx * 12);
+  const baseMaxGap = Math.max(baseMinGap + 100, 700 - idx * 16);
   const minGap = baseMinGap * f.gapMul;
   const maxGap = baseMaxGap * f.gapMul;
   let altFlip = false; // for zigzag
@@ -158,77 +158,77 @@ function genSegment(
       if (pick === 0) {
         const count = 1 + Math.floor(rand() * (1 + difficulty * 3 + (f.rapid ? 1 : 0)));
         for (let i = 0; i < count; i++) out.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
-        x += count * 38 + gap;
+        x += count * 38 + gap * 1.2;
       } else if (pick === 1) {
         const stack = (f.towers ? 2 : 1) + Math.floor(rand() * (1 + difficulty * 2 + (f.towers ? 1 : 0)));
         const bw = 40;
         for (let i = 0; i < stack; i++) out.push({ type: "block", x, y: i * 40, w: bw, h: 40 });
         if (rand() < 0.4 + difficulty * 0.3) out.push({ type: "spike", x: x + 3, w: 34, h: 30 });
-        x += bw + gap;
+        x += bw + gap * 1.2;
       } else {
         out.push({ type: "saw", x, y: 60 + rand() * 50, r: 22 });
-        x += 50 + gap;
+        x += 70 + gap * 1.2;
       }
     } else if (vehicle === "ship") {
       if (f.corridor && rand() < 0.5) {
         // narrow corridor: ceiling spike + low saw
         out.push({ type: "spike", x, w: 34, h: 34, flip: true });
         out.push({ type: "saw", x: x + 50, y: 40 + rand() * 60, r: 20 });
-        x += 110 + gap * 0.7;
+        x += 140 + gap * 0.9;
       } else if (f.laserGate && rand() < 0.35) {
         out.push({ type: "spike", x, w: 34, h: 34, flip: true });
         out.push({ type: "spike", x, w: 34, h: 34 });
-        x += 100 + gap;
+        x += 130 + gap;
       } else {
         const pick = pickWeighted(rand, [f.spikeBias, 0.0001, f.sawBias]);
         if (pick === 0) {
           out.push({ type: "spike", x, w: 34, h: 34, flip: true });
-          x += 34 + gap * 0.7;
+          x += 34 + gap * 0.9;
         } else {
           out.push({ type: "saw", x, y: 120 + rand() * (f.sawField ? 220 : 180), r: 22 });
-          x += 50 + gap;
+          x += 70 + gap * 1.1;
         }
       }
     } else if (vehicle === "ball") {
       if (f.zigzag) {
         out.push({ type: "spike", x, w: 34, h: 34, flip: altFlip });
         altFlip = !altFlip;
-        x += 34 + gap * (f.rapid ? 0.55 : 0.8);
+        x += 34 + gap * (f.rapid ? 0.7 : 1.0);
       } else if (f.laserGate && rand() < 0.3) {
         out.push({ type: "spike", x, w: 34, h: 34 });
         out.push({ type: "spike", x: x + 60, w: 34, h: 34, flip: true });
-        x += 150 + gap;
+        x += 180 + gap;
       } else {
         const roll = rand();
         if (roll < 0.45) {
           out.push({ type: "spike", x, w: 34, h: 34 });
-          x += 34 + gap * 0.8;
+          x += 34 + gap * 1.0;
         } else if (roll < 0.85) {
           out.push({ type: "spike", x, w: 34, h: 34, flip: true });
-          x += 34 + gap * 0.8;
+          x += 34 + gap * 1.0;
         } else {
           out.push({ type: "saw", x, y: 60 + rand() * 100, r: 22 });
-          x += 50 + gap;
+          x += 70 + gap * 1.1;
         }
       }
     } else if (vehicle === "ufo") {
       if (f.sawField && rand() < 0.5) {
         const c = 1 + Math.floor(rand() * 2);
         for (let i = 0; i < c; i++) out.push({ type: "saw", x: x + i * 70, y: 60 + rand() * 220, r: 20 });
-        x += c * 70 + gap;
+        x += c * 70 + gap * 1.1;
       } else if (f.laserGate && rand() < 0.3) {
         out.push({ type: "spike", x, w: 34, h: 34 });
         out.push({ type: "spike", x: x + 10, w: 34, h: 34, flip: true });
-        x += 120 + gap;
+        x += 150 + gap;
       } else {
         const pick = pickWeighted(rand, [f.spikeBias, 0.0001, f.sawBias]);
         if (pick === 0) {
           const count = 1 + Math.floor(rand() * (1 + difficulty * 2));
           for (let i = 0; i < count; i++) out.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
-          x += count * 38 + gap;
+          x += count * 38 + gap * 1.1;
         } else {
           out.push({ type: "saw", x, y: 100 + rand() * 160, r: 22 });
-          x += 50 + gap;
+          x += 70 + gap * 1.1;
         }
       }
     } else {
@@ -236,21 +236,21 @@ function genSegment(
       if (f.laserGate && rand() < 0.4) {
         out.push({ type: "spike", x, w: 30, h: 30 });
         out.push({ type: "spike", x: x + 50, w: 30, h: 30, flip: true });
-        x += 130 + gap * 0.7;
+        x += 160 + gap * 0.9;
       } else if (f.rapid) {
         out.push({ type: "spike", x, w: 30, h: 30, flip: rand() < 0.5 });
-        x += 30 + gap * 0.45;
+        x += 30 + gap * 0.6;
       } else {
         const roll = rand();
         if (roll < 0.5) {
           out.push({ type: "spike", x, w: 30, h: 30 });
-          x += 30 + gap * 0.6;
+          x += 30 + gap * 0.8;
         } else if (roll < 0.9) {
           out.push({ type: "spike", x, w: 30, h: 30, flip: true });
-          x += 30 + gap * 0.6;
+          x += 30 + gap * 0.8;
         } else {
           out.push({ type: "saw", x, y: 120 + rand() * 120, r: 20 });
-          x += 50 + gap * 0.7;
+          x += 70 + gap * 0.9;
         }
       }
     }
