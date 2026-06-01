@@ -4,17 +4,17 @@ import GeometryGame from "@/components/GeometryGame";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Geo Rush — 11 Level Rhythm Runner" },
+      { title: "PRISM RUSH — 15 Level Shape Runner" },
       {
         name: "description",
         content:
-          "Geo Rush — a Geometry Dash-inspired rhythm runner with 11 procedurally crafted levels, ~3 minutes each, getting harder as you go.",
+          "PRISM RUSH — a neon shape-runner with 15 procedurally crafted levels. Pilot gems, stars, rockets, rhombs and bolts through escalating obstacles.",
       },
-      { property: "og:title", content: "Geo Rush — 11 Level Rhythm Runner" },
+      { property: "og:title", content: "PRISM RUSH — 15 Level Shape Runner" },
       {
         property: "og:description",
         content:
-          "Jump, fly and survive across 11 escalating levels. Space or tap to jump.",
+          "Pilot 5 distinct shapes across 15 escalating neon levels. Tap or space to act.",
       },
     ],
     links: [
