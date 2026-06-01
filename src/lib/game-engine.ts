@@ -56,6 +56,11 @@ const PALETTES = [
   ["#f472b6", "#500724", "#fda4af"],
   ["#0891b2", "#083344", "#22d3ee"],
   ["#000000", "#1a0000", "#ff0033"],
+  ["#1a0033", "#000000", "#9333ea"],
+  ["#330000", "#000000", "#ff1744"],
+  ["#001a33", "#000000", "#00e5ff"],
+  ["#1a1a00", "#000000", "#ffea00"],
+  ["#000000", "#0a0a0a", "#ffffff"],
 ];
 
 
@@ -80,6 +85,11 @@ const NAMES = [
   "Nebula Crusher",
   "Hyper Vortex",
   "Omega Annihilation",
+  "Doom Cascade",
+  "Inferno Abyss",
+  "Chrono Shatter",
+  "Singularity Collapse",
+  "Absolute Zero",
 ];
 
 const VEHICLES: Vehicle[] = [
@@ -103,6 +113,11 @@ const VEHICLES: Vehicle[] = [
   "ball",
   "wave",
   "cube",
+  "wave",
+  "ship",
+  "ufo",
+  "ball",
+  "wave",
 ];
 
 
@@ -144,7 +159,13 @@ const FLAVORS: Flavor[] = [
   { gapMul: 1.15, spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, zigzag: true, laserGate: true, rapid: true },   // 16 eclipse
   { gapMul: 1.1, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, sawField: true, laserGate: true, rapid: true },  // 17 nebula crusher
   { gapMul: 1.05, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, corridor: true, laserGate: true, rapid: true, zigzag: true }, // 18 hyper vortex
-  { gapMul: 0.95, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 19 OMEGA — hardest
+  { gapMul: 0.95, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 19 OMEGA
+  // === Hyper-hard final 5 ===
+  { gapMul: 0.85, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 20
+  { gapMul: 0.8,  spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 21
+  { gapMul: 0.75, spikeBias: 0.4, blockBias: 0.1, sawBias: 0.5, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 22
+  { gapMul: 0.7,  spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 23
+  { gapMul: 0.6,  spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 24 ABSOLUTE ZERO — insane
 ];
 
 
@@ -284,7 +305,7 @@ const ALL_VEHICLES: Vehicle[] = ["cube", "ship", "ball", "ufo", "wave"];
 
 export function buildLevel(idx: number): Level {
   const rand = mulberry32(1337 + idx * 7919);
-  const difficulty = idx / 19;
+  const difficulty = idx / 24;
   const speed = 380 + idx * 16;
   const gravity = 2400 + idx * 70;
   const jump = 780 + idx * 14;
@@ -334,4 +355,4 @@ export function buildLevel(idx: number): Level {
   };
 }
 
-export const LEVELS: Level[] = Array.from({ length: 20 }, (_, i) => buildLevel(i));
+export const LEVELS: Level[] = Array.from({ length: 25 }, (_, i) => buildLevel(i));
