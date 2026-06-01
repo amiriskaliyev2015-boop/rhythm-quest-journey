@@ -60,7 +60,7 @@ function Game({ level, onExit, onWin }: Props) {
 
     // World state
     let scrollX = 0;
-    let py = 0; // y above ground (positive = up)
+    let py = hasCeil() ? 60 : 0; // y above ground (positive = up)
     let vy = 0;
     let onGround = true;
     let onCeiling = false;
