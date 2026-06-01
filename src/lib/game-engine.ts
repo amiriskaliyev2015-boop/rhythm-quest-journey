@@ -108,21 +108,21 @@ export type Flavor = {
 };
 
 const FLAVORS: Flavor[] = [
-  { gapMul: 1.15, spikeBias: 0.7, blockBias: 0.2, sawBias: 0.1 },                                   // 0 tutorial
-  { gapMul: 1.0,  spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, corridor: true },                    // 1 ship corridor
-  { gapMul: 0.95, spikeBias: 0.4, blockBias: 0.5, sawBias: 0.1, towers: true },                      // 2 block towers
-  { gapMul: 0.9,  spikeBias: 0.7, blockBias: 0.0, sawBias: 0.3, zigzag: true },                      // 3 ball zigzag
-  { gapMul: 1.05, spikeBias: 0.4, blockBias: 0.1, sawBias: 0.5, sawField: true },                    // 4 ufo saw field
-  { gapMul: 0.85, spikeBias: 0.55, blockBias: 0.35, sawBias: 0.1, rapid: true },                     // 5 cube rapid
-  { gapMul: 1.4,  spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2 },                                    // 6 wave laser gates (eased)
-  { gapMul: 0.9,  spikeBias: 0.3, blockBias: 0.2, sawBias: 0.5, corridor: true, sawField: true },    // 7 ship saw maze
-  { gapMul: 0.85, spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2, zigzag: true, rapid: true },         // 8 ball rapid zigzag
-  { gapMul: 1.1,  spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, sawField: true, laserGate: true },   // 9 ufo gates
-  { gapMul: 0.85, spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, rapid: true, laserGate: true },      // 10 wave inferno
-  { gapMul: 0.85, spikeBias: 0.4, blockBias: 0.5, sawBias: 0.1, towers: true, rapid: true },         // 11 cube tower rush
-  { gapMul: 0.85, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, corridor: true, laserGate: true },   // 12 ship gauntlet
-  { gapMul: 0.85, spikeBias: 0.7, blockBias: 0.1, sawBias: 0.2, zigzag: true, laserGate: true },     // 13 ball chaos
-  { gapMul: 0.8,  spikeBias: 0.4, blockBias: 0.2, sawBias: 0.4, sawField: true, laserGate: true, rapid: true }, // 14 apex
+  { gapMul: 1.5, spikeBias: 0.7, blockBias: 0.2, sawBias: 0.1 },                                   // 0 tutorial
+  { gapMul: 1.35, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, corridor: true },                    // 1 ship corridor
+  { gapMul: 1.3, spikeBias: 0.4, blockBias: 0.5, sawBias: 0.1, towers: true },                      // 2 block towers
+  { gapMul: 1.25, spikeBias: 0.7, blockBias: 0.0, sawBias: 0.3, zigzag: true },                      // 3 ball zigzag
+  { gapMul: 1.35, spikeBias: 0.4, blockBias: 0.1, sawBias: 0.5, sawField: true },                    // 4 ufo saw field
+  { gapMul: 1.2, spikeBias: 0.55, blockBias: 0.35, sawBias: 0.1, rapid: true },                     // 5 cube rapid
+  { gapMul: 1.6, spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2 },                                    // 6 wave laser gates (eased)
+  { gapMul: 1.25, spikeBias: 0.3, blockBias: 0.2, sawBias: 0.5, corridor: true, sawField: true },    // 7 ship saw maze
+  { gapMul: 1.2, spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2, zigzag: true, rapid: true },         // 8 ball rapid zigzag
+  { gapMul: 1.4, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, sawField: true, laserGate: true },   // 9 ufo gates
+  { gapMul: 1.2, spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, rapid: true, laserGate: true },      // 10 wave inferno
+  { gapMul: 1.2, spikeBias: 0.4, blockBias: 0.5, sawBias: 0.1, towers: true, rapid: true },         // 11 cube tower rush
+  { gapMul: 1.2, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, corridor: true, laserGate: true },   // 12 ship gauntlet
+  { gapMul: 1.2, spikeBias: 0.7, blockBias: 0.1, sawBias: 0.2, zigzag: true, laserGate: true },     // 13 ball chaos
+  { gapMul: 1.15, spikeBias: 0.4, blockBias: 0.2, sawBias: 0.4, sawField: true, laserGate: true, rapid: true }, // 14 apex
 ];
 
 function pickWeighted(rand: () => number, weights: number[]): number {
