@@ -734,17 +734,53 @@ export default function GeometryGame() {
       return new Set();
     }
   });
+  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem("gd-best");
+      return raw ? (JSON.parse(raw) as Record<number, number>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [prisms, setPrisms] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      return Number(localStorage.getItem("gd-prisms") || 0) || 0;
+    } catch {
+      return 0;
+    }
+  });
 
-  const handleWin = useCallback((i: number) => {
-    setCompleted((prev) => {
-      const next = new Set(prev);
-      next.add(i);
-      try {
-        localStorage.setItem("gd-completed", JSON.stringify([...next]));
-      } catch {}
-      return next;
-    });
-  }, []);
+  const handleWin = useCallback(
+    (i: number, info: { attempts: number; reward: number; isNewRecord: boolean }) => {
+      setCompleted((prev) => {
+        const next = new Set(prev);
+        next.add(i);
+        try {
+          localStorage.setItem("gd-completed", JSON.stringify([...next]));
+        } catch {}
+        return next;
+      });
+      if (info.isNewRecord) {
+        setBestAttempts((prev) => {
+          const next = { ...prev, [i]: info.attempts };
+          try {
+            localStorage.setItem("gd-best", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+      }
+      setPrisms((p) => {
+        const next = p + info.reward;
+        try {
+          localStorage.setItem("gd-prisms", String(next));
+        } catch {}
+        return next;
+      });
+    },
+    [],
+  );
 
   const selectLevel = (i: number) => {
     setSelected(i);
@@ -802,6 +838,9 @@ export default function GeometryGame() {
           </button>
 
           <p className="mt-8 text-white/30 text-xs tracking-widest">
+            ◆ {prisms} PRISMS
+          </p>
+          <p className="mt-2 text-white/30 text-xs tracking-widest">
             GEM · ROCKET · STAR · RHOMB · BOLT
           </p>
         </div>
@@ -815,11 +854,13 @@ export default function GeometryGame() {
       <Game
         key={selected}
         level={level}
+        bestAttempts={bestAttempts[selected] ?? null}
         onExit={goToMenu}
-        onWin={() => handleWin(selected)}
+        onWin={(info) => handleWin(selected, info)}
       />
     );
   }
+
 
   return (
     <div className="min-h-screen px-4 py-12 md:py-20">
