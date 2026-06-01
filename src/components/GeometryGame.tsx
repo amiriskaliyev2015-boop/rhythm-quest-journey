@@ -71,7 +71,7 @@ function Game({ level, onExit, onWin }: Props) {
     let inputHeld = false;
     let prevHeld = false;
 
-    const playerTop = () => py + PLAYER_SIZE;
+    
 
     const reset = () => {
       scrollX = 0;
