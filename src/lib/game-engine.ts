@@ -178,7 +178,7 @@ function genSegment(
       } else if (f.laserGate && rand() < 0.35) {
         out.push({ type: "spike", x, w: 34, h: 34, flip: true });
         out.push({ type: "spike", x, w: 34, h: 34 });
-        x += 60 + gap;
+        x += 100 + gap;
       } else {
         const pick = pickWeighted(rand, [f.spikeBias, 0.0001, f.sawBias]);
         if (pick === 0) {
