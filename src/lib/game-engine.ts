@@ -6,14 +6,15 @@ export type Vehicle = "cube" | "ship" | "ball" | "ufo" | "wave";
 export type Obstacle =
   | { type: "spike"; x: number; w: number; h: number; flip?: boolean }
   | { type: "block"; x: number; y: number; w: number; h: number }
-  | { type: "saw"; x: number; y: number; r: number };
+  | { type: "saw"; x: number; y: number; r: number }
+  | { type: "portal"; x: number; vehicle: Vehicle };
 
 export const CEIL_HEIGHT = 360; // play area height for flying vehicles
 
 export interface Level {
   index: number;
   name: string;
-  vehicle: Vehicle;
+  startingVehicle: Vehicle;
   speed: number;
   gravity: number;
   jump: number;
