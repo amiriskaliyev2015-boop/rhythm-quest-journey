@@ -47,7 +47,7 @@ function Game({ level, onExit, onWin }: Props) {
     let vehicle: Vehicle = level.startingVehicle;
     const hasCeil = () => vehicle === "ship" || vehicle === "ball" || vehicle === "wave";
     const consumedPortals = new Set<number>();
-    let firstFrame = true;
+    
 
     const switchVehicle = (next: Vehicle) => {
       vehicle = next;
