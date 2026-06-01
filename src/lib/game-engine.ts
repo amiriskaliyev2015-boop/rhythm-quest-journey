@@ -56,6 +56,11 @@ const PALETTES = [
   ["#f472b6", "#500724", "#fda4af"],
   ["#0891b2", "#083344", "#22d3ee"],
   ["#000000", "#1a0000", "#ff0033"],
+  ["#1a0033", "#000000", "#9333ea"],
+  ["#330000", "#000000", "#ff1744"],
+  ["#001a33", "#000000", "#00e5ff"],
+  ["#1a1a00", "#000000", "#ffea00"],
+  ["#000000", "#0a0a0a", "#ffffff"],
 ];
 
 
@@ -80,6 +85,11 @@ const NAMES = [
   "Nebula Crusher",
   "Hyper Vortex",
   "Omega Annihilation",
+  "Doom Cascade",
+  "Inferno Abyss",
+  "Chrono Shatter",
+  "Singularity Collapse",
+  "Absolute Zero",
 ];
 
 const VEHICLES: Vehicle[] = [
@@ -103,6 +113,11 @@ const VEHICLES: Vehicle[] = [
   "ball",
   "wave",
   "cube",
+  "wave",
+  "ship",
+  "ufo",
+  "ball",
+  "wave",
 ];
 
 
