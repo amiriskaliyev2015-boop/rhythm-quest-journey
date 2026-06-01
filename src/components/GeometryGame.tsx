@@ -44,7 +44,7 @@ function Game({ level, onExit, onWin }: Props) {
     window.addEventListener("resize", resize);
 
     const hasCeiling =
-      level.vehicle === "ship" || level.vehicle === "ball" || level.vehicle === "wave";
+      vehicle === "ship" || vehicle === "ball" || vehicle === "wave";
 
     // World state
     let scrollX = 0;
@@ -96,19 +96,19 @@ function Game({ level, onExit, onWin }: Props) {
       }
       if (stateRef.current !== "playing") return;
 
-      if (level.vehicle === "cube") {
+      if (vehicle === "cube") {
         if (onGround) {
           vy = level.jump;
           onGround = false;
         }
-      } else if (level.vehicle === "ball") {
+      } else if (vehicle === "ball") {
         if (onGround || onCeiling) {
           gravityDir *= -1;
           onGround = false;
           onCeiling = false;
           vy = 0;
         }
-      } else if (level.vehicle === "ufo") {
+      } else if (vehicle === "ufo") {
         // tap-only flap (handled on press edge below too)
         vy = level.jump * 0.85;
       }
@@ -204,22 +204,22 @@ function Game({ level, onExit, onWin }: Props) {
         scrollX += level.speed * dt;
 
         // ----- VEHICLE PHYSICS -----
-        if (level.vehicle === "cube") {
+        if (vehicle === "cube") {
           vy -= level.gravity * dt;
           py += vy * dt;
-        } else if (level.vehicle === "ship") {
+        } else if (vehicle === "ship") {
           const thrust = level.gravity * 0.9;
           vy += (inputHeld ? thrust : -thrust) * dt;
           vy = Math.max(-700, Math.min(700, vy));
           py += vy * dt;
-        } else if (level.vehicle === "ball") {
+        } else if (vehicle === "ball") {
           // gravity direction can be flipped
           vy -= level.gravity * 0.85 * dt * gravityDir;
           py += vy * dt;
-        } else if (level.vehicle === "ufo") {
+        } else if (vehicle === "ufo") {
           vy -= level.gravity * 0.9 * dt;
           py += vy * dt;
-        } else if (level.vehicle === "wave") {
+        } else if (vehicle === "wave") {
           const v = level.speed; // 45° travel
           vy = inputHeld ? v : -v;
           py += vy * dt;
@@ -227,7 +227,7 @@ function Game({ level, onExit, onWin }: Props) {
 
         // ----- BLOCK LANDING (cube only) -----
         let landedOnBlock = false;
-        if (level.vehicle === "cube") {
+        if (vehicle === "cube") {
           for (const o of level.obstacles) {
             if (o.type !== "block") continue;
             const ox = o.x - scrollX;
@@ -253,7 +253,7 @@ function Game({ level, onExit, onWin }: Props) {
           if (py <= 0) {
             py = 0;
             // wave dies on touching the ground
-            if (level.vehicle === "wave") die();
+            if (vehicle === "wave") die();
             vy = 0;
             onGround = true;
           } else {
@@ -262,20 +262,20 @@ function Game({ level, onExit, onWin }: Props) {
         }
         if (hasCeiling && py >= ceilingPy) {
           py = ceilingPy;
-          if (level.vehicle === "wave") die();
+          if (vehicle === "wave") die();
           vy = 0;
           onCeiling = true;
         }
 
         // ----- ROTATION -----
-        if (level.vehicle === "cube") {
+        if (vehicle === "cube") {
           if (!onGround) rotation += dt * 6;
           else rotation = Math.round(rotation / (Math.PI / 2)) * (Math.PI / 2);
-        } else if (level.vehicle === "ball") {
+        } else if (vehicle === "ball") {
           rotation += dt * 8 * gravityDir;
-        } else if (level.vehicle === "ship") {
+        } else if (vehicle === "ship") {
           rotation = Math.max(-0.5, Math.min(0.5, -vy / 700));
-        } else if (level.vehicle === "wave") {
+        } else if (vehicle === "wave") {
           rotation = inputHeld ? -Math.PI / 4 : Math.PI / 4;
         } else {
           rotation = 0;
@@ -414,13 +414,13 @@ function Game({ level, onExit, onWin }: Props) {
       ctx.lineWidth = 3;
 
       const s = PLAYER_SIZE / 2;
-      if (level.vehicle === "cube") {
+      if (vehicle === "cube") {
         ctx.fillRect(-s, -s, PLAYER_SIZE, PLAYER_SIZE);
         ctx.strokeRect(-s, -s, PLAYER_SIZE, PLAYER_SIZE);
         ctx.fillStyle = "#0f172a";
         ctx.fillRect(-8, -8, 6, 6);
         ctx.fillRect(2, -8, 6, 6);
-      } else if (level.vehicle === "ship") {
+      } else if (vehicle === "ship") {
         // teardrop shape pointing right
         ctx.beginPath();
         ctx.moveTo(s, 0);
@@ -435,7 +435,7 @@ function Game({ level, onExit, onWin }: Props) {
         ctx.beginPath();
         ctx.arc(s * 0.2, -2, 5, 0, Math.PI * 2);
         ctx.fill();
-      } else if (level.vehicle === "ball") {
+      } else if (vehicle === "ball") {
         ctx.beginPath();
         ctx.arc(0, 0, s, 0, Math.PI * 2);
         ctx.fill();
@@ -448,7 +448,7 @@ function Game({ level, onExit, onWin }: Props) {
         ctx.moveTo(0, -s);
         ctx.lineTo(0, s);
         ctx.stroke();
-      } else if (level.vehicle === "ufo") {
+      } else if (vehicle === "ufo") {
         // saucer
         ctx.beginPath();
         ctx.ellipse(0, 4, s, s * 0.45, 0, 0, Math.PI * 2);
@@ -459,7 +459,7 @@ function Game({ level, onExit, onWin }: Props) {
         ctx.arc(0, -4, s * 0.5, Math.PI, 0);
         ctx.closePath();
         ctx.fill();
-      } else if (level.vehicle === "wave") {
+      } else if (vehicle === "wave") {
         // triangle dart
         ctx.beginPath();
         ctx.moveTo(s, 0);
@@ -473,7 +473,7 @@ function Game({ level, onExit, onWin }: Props) {
       ctx.restore();
 
       // wave trail
-      if (level.vehicle === "wave" && stateRef.current === "playing") {
+      if (vehicle === "wave" && stateRef.current === "playing") {
         ctx.strokeStyle = `${level.accent}66`;
         ctx.lineWidth = 4;
         ctx.beginPath();
@@ -504,13 +504,13 @@ function Game({ level, onExit, onWin }: Props) {
   const state = stateRef.current;
 
   const hint =
-    level.vehicle === "cube"
+    vehicle === "cube"
       ? "TAP / SPACE — JUMP"
-      : level.vehicle === "ship"
+      : vehicle === "ship"
       ? "HOLD — FLY UP · RELEASE — FALL"
-      : level.vehicle === "ball"
+      : vehicle === "ball"
       ? "TAP — FLIP GRAVITY"
-      : level.vehicle === "ufo"
+      : vehicle === "ufo"
       ? "TAP IN AIR — FLAP"
       : "HOLD — UP · RELEASE — DOWN";
 
@@ -529,7 +529,7 @@ function Game({ level, onExit, onWin }: Props) {
           <div className="text-xs uppercase tracking-widest opacity-70">
             Level {level.index + 1} — {level.name}
             <span className="ml-2 px-2 py-0.5 rounded bg-white/15 text-[10px]">
-              {VEHICLE_LABELS[level.vehicle]}
+              {VEHICLE_LABELS[vehicle]}
             </span>
           </div>
           <div className="h-2 mt-1 bg-white/10 rounded-full overflow-hidden">
@@ -726,7 +726,7 @@ export default function GeometryGame() {
                       LEVEL {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur tracking-widest">
-                      {VEHICLE_LABELS[lv.vehicle]}
+                      {VEHICLE_LABELS[lv.startingVehicle]}
                     </span>
                   </div>
                   <h3 className="mt-3 text-2xl font-black tracking-wider">{lv.name}</h3>
