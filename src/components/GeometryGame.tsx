@@ -128,7 +128,7 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
     const handlePress = () => {
       inputHeld = true;
       if (stateRef.current === "dead") {
-        setAttempts((a) => a + 1);
+        bumpAttempts();
         reset();
         return;
       }
