@@ -69,6 +69,11 @@ const NAMES = [
   "Solar Flare",
   "Void Runner",
   "Apex Singularity",
+  "Quantum Rift",
+  "Eclipse Protocol",
+  "Nebula Crusher",
+  "Hyper Vortex",
+  "Omega Annihilation",
 ];
 
 const VEHICLES: Vehicle[] = [
@@ -87,7 +92,13 @@ const VEHICLES: Vehicle[] = [
   "ship",
   "ball",
   "wave",
+  "ufo",
+  "ship",
+  "ball",
+  "wave",
+  "cube",
 ];
+
 
 
 // Level "flavor" tweaks density, gap and bias toward certain obstacle types.
