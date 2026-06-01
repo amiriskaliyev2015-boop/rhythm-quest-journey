@@ -327,9 +327,9 @@ function Game({ level, onExit, onWin }: Props) {
 
       // ----- RENDER -----
       const grad = ctx.createLinearGradient(0, 0, 0, h);
-      pgrad.addColorStop(0, level.bgFrom);
-      pgrad.addColorStop(1, level.bgTo);
-      ctx.fillStyle = pgrad;
+      grad.addColorStop(0, level.bgFrom);
+      grad.addColorStop(1, level.bgTo);
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
       // parallax stars
