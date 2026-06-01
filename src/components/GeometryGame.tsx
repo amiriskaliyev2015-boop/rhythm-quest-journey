@@ -651,7 +651,7 @@ export default function GeometryGame() {
           </h1>
 
           <p className="mt-6 text-white/50 tracking-[0.3em] uppercase text-sm md:text-base">
-            11 Levels &middot; 5 Vehicles &middot; Rhythm Runner
+            15 Levels &middot; 5 Vehicles &middot; Rhythm Runner
           </p>
 
           <button
@@ -697,7 +697,7 @@ export default function GeometryGame() {
             GEO RUSH
           </h1>
           <p className="mt-3 text-muted-foreground tracking-widest text-sm uppercase">
-            11 levels · 5 vehicles · ~3 min each
+            15 levels · 5 vehicles · ~3 min each
           </p>
         </div>
 

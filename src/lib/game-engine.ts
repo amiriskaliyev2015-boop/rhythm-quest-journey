@@ -46,9 +46,12 @@ const PALETTES = [
   ["#f97316", "#7c2d12", "#fdba74"],
   ["#8b5cf6", "#2e1065", "#c4b5fd"],
   ["#f43f5e", "#4c0519", "#fb7185"],
+  ["#14b8a6", "#134e4a", "#5eead4"],
+  ["#eab308", "#422006", "#fde68a"],
+  ["#3b82f6", "#1e1b4b", "#93c5fd"],
+  ["#dc2626", "#450a0a", "#fca5a5"],
 ];
 
-// Original level names (different from GD)
 const NAMES = [
   "Neon Pulse",
   "Sky Glide",
@@ -61,21 +64,30 @@ const NAMES = [
   "Pendulum",
   "Hover Storm",
   "Final Circuit",
+  "Plasma Drift",
+  "Solar Flare",
+  "Void Runner",
+  "Apex Singularity",
 ];
 
 const VEHICLES: Vehicle[] = [
-  "cube",  // 1
-  "ship",  // 2
-  "cube",  // 3
-  "ball",  // 4
-  "ufo",   // 5
-  "cube",  // 6
-  "wave",  // 7
-  "ship",  // 8
-  "ball",  // 9
-  "ufo",   // 10
-  "wave",  // 11
+  "cube",
+  "ship",
+  "cube",
+  "ball",
+  "ufo",
+  "cube",
+  "wave",
+  "ship",
+  "ball",
+  "ufo",
+  "wave",
+  "cube",
+  "ship",
+  "ball",
+  "wave",
 ];
+
 
 export function buildLevel(idx: number): Level {
   const rand = mulberry32(1337 + idx * 7919);
@@ -196,4 +208,4 @@ export function buildLevel(idx: number): Level {
   };
 }
 
-export const LEVELS: Level[] = Array.from({ length: 11 }, (_, i) => buildLevel(i));
+export const LEVELS: Level[] = Array.from({ length: 15 }, (_, i) => buildLevel(i));
