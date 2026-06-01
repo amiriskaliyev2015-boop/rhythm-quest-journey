@@ -52,7 +52,9 @@ const computeReward = (levelIndex: number, attempts: number, prevBest: number | 
   const base = BASE_REWARD * (levelIndex + 1);
   const isNewRecord = prevBest === null || attempts < prevBest;
   const bonus = isNewRecord ? RECORD_BONUS * (levelIndex + 1) : 0;
-  return { reward: base + bonus, isNewRecord };
+  // Extra starter bonus for first two levels
+  const starterBonus = levelIndex < 2 ? 200 : 0;
+  return { reward: base + bonus + starterBonus, isNewRecord };
 };
 
 
