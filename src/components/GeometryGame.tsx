@@ -14,11 +14,11 @@ interface Props {
 }
 
 const VEHICLE_LABELS: Record<Vehicle, string> = {
-  cube: "CUBE",
-  ship: "SHIP",
-  ball: "BALL",
-  ufo: "UFO",
-  wave: "WAVE",
+  cube: "GEM",
+  ship: "ROCKET",
+  ball: "STAR",
+  ufo: "RHOMB",
+  wave: "BOLT",
 };
 
 function Game({ level, onExit, onWin }: Props) {
