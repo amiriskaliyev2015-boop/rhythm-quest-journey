@@ -445,6 +445,7 @@ function Game({ level, onExit, onWin }: Props) {
 }
 
 export default function GeometryGame() {
+  const [screen, setScreen] = useState<"intro" | "levels" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
   const [completed, setCompleted] = useState<Set<number>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -470,13 +471,76 @@ export default function GeometryGame() {
     [],
   );
 
-  if (selected !== null) {
+  const selectLevel = (i: number) => {
+    setSelected(i);
+    setScreen("playing");
+  };
+
+  const goToMenu = () => {
+    setSelected(null);
+    setScreen("levels");
+  };
+
+  if (screen === "intro") {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0a0a12] overflow-hidden">
+        {/* Animated background particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full opacity-30"
+              style={{
+                width: 2 + (i % 4),
+                height: 2 + (i % 4),
+                left: `${(i * 37) % 100}%`,
+                top: `${(i * 23) % 100}%`,
+                background: i % 2 === 0 ? "#22d3ee" : "#a855f7",
+                animation: `pulse ${2 + (i % 5)}s ease-in-out ${i * 0.15}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="relative z-10 text-center px-4">
+          <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-[0_0_40px_rgba(34,211,238,0.4)]">
+            GEO
+            <br />
+            <span className="text-transparent bg-clip-text"
+              style={{ backgroundImage: "linear-gradient(135deg, #22d3ee, #a855f7)" }}
+            >
+              RUSH
+            </span>
+          </h1>
+
+          <p className="mt-6 text-white/50 tracking-[0.3em] uppercase text-sm md:text-base">
+            11 Levels &middot; Rhythm Runner
+          </p>
+
+          <button
+            onClick={() => setScreen("levels")}
+            className="mt-12 px-16 py-5 text-2xl font-black tracking-[0.2em] text-black bg-white rounded-full
+                       hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] active:scale-95
+                       transition-all duration-200"
+          >
+            PLAY
+          </button>
+
+          <p className="mt-8 text-white/30 text-xs tracking-widest">
+            SPACE / TAP TO JUMP &middot; ESC TO EXIT
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (selected !== null && screen === "playing") {
     const level = LEVELS[selected];
     return (
       <Game
         key={selected}
         level={level}
-        onExit={() => setSelected(null)}
+        onExit={goToMenu}
         onWin={() => handleWin(selected)}
       />
     );
@@ -507,7 +571,7 @@ export default function GeometryGame() {
             return (
               <button
                 key={i}
-                onClick={() => setSelected(i)}
+                onClick={() => selectLevel(i)}
                 className="group relative overflow-hidden rounded-2xl p-5 text-left border border-white/10 hover:border-white/30 transition transform hover:-translate-y-1 hover:shadow-2xl"
                 style={{
                   background: `linear-gradient(135deg, ${lv.bgFrom}, ${lv.bgTo})`,
