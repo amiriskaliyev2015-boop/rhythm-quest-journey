@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
+import { LevelMusic } from "@/lib/game-music";
 
 const GROUND_H = 80;
 const PLAYER_SIZE = 40;
