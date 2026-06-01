@@ -120,6 +120,7 @@ const VEHICLES: Vehicle[] = [
   "ufo",
   "ball",
   "wave",
+  "cube",
 ];
 
 
