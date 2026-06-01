@@ -792,10 +792,10 @@ export default function GeometryGame() {
                 "linear-gradient(120deg, oklch(0.78 0.2 195), oklch(0.72 0.22 340), oklch(0.78 0.2 80))",
             }}
           >
-            GEO RUSH
+            PRISM RUSH
           </h1>
           <p className="mt-3 text-muted-foreground tracking-widest text-sm uppercase">
-            15 levels · 5 vehicles · ~3 min each
+            15 levels · 5 shapes · neon shape-runner
           </p>
         </div>
 
