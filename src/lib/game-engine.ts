@@ -114,7 +114,7 @@ const FLAVORS: Flavor[] = [
   { gapMul: 0.9,  spikeBias: 0.7, blockBias: 0.0, sawBias: 0.3, zigzag: true },                      // 3 ball zigzag
   { gapMul: 1.05, spikeBias: 0.4, blockBias: 0.1, sawBias: 0.5, sawField: true },                    // 4 ufo saw field
   { gapMul: 0.85, spikeBias: 0.55, blockBias: 0.35, sawBias: 0.1, rapid: true },                     // 5 cube rapid
-  { gapMul: 1.1,  spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2, laserGate: true },                   // 6 wave laser gates
+  { gapMul: 1.4,  spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2 },                                    // 6 wave laser gates (eased)
   { gapMul: 0.9,  spikeBias: 0.3, blockBias: 0.2, sawBias: 0.5, corridor: true, sawField: true },    // 7 ship saw maze
   { gapMul: 0.85, spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2, zigzag: true, rapid: true },         // 8 ball rapid zigzag
   { gapMul: 1.1,  spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, sawField: true, laserGate: true },   // 9 ufo gates
