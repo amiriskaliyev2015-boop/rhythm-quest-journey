@@ -380,23 +380,43 @@ function Game({ level, onExit, onWin }: Props) {
         const ox = (o as { x: number }).x - scrollX;
         if (ox > w + 60 || ox < -120) continue;
         if (o.type === "spike") {
-          ctx.fillStyle = level.accent;
-          ctx.strokeStyle = "rgba(0,0,0,0.6)";
+          // MINI LASER EMITTER
+          const flip = !!o.flip;
+          const baseY = flip ? groundY - CEIL_HEIGHT : groundY;
+          const tipY = flip ? baseY + o.h : baseY - o.h;
+          const cx = ox + o.w / 2;
+          // Emitter base
+          ctx.fillStyle = "#1f2937";
+          ctx.strokeStyle = "rgba(0,0,0,0.7)";
           ctx.lineWidth = 2;
+          const baseH = 6;
+          ctx.fillRect(ox, flip ? baseY - 1 : baseY - baseH + 1, o.w, baseH);
+          ctx.strokeRect(ox, flip ? baseY - 1 : baseY - baseH + 1, o.w, baseH);
+          // Glowing emitter dot
+          ctx.fillStyle = level.accent;
+          ctx.shadowColor = level.accent;
+          ctx.shadowBlur = 12;
           ctx.beginPath();
-          if (o.flip) {
-            const ceilY = groundY - CEIL_HEIGHT;
-            ctx.moveTo(ox, ceilY);
-            ctx.lineTo(ox + o.w / 2, ceilY + o.h);
-            ctx.lineTo(ox + o.w, ceilY);
-          } else {
-            ctx.moveTo(ox, groundY);
-            ctx.lineTo(ox + o.w / 2, groundY - o.h);
-            ctx.lineTo(ox + o.w, groundY);
-          }
-          ctx.closePath();
+          ctx.arc(cx, flip ? baseY + 2 : baseY - baseH / 2 - 1, 2.5, 0, Math.PI * 2);
           ctx.fill();
-          ctx.stroke();
+          // Laser beam (pulsing width via scrollX)
+          const pulse = 0.6 + Math.abs(Math.sin(scrollX * 0.04)) * 0.4;
+          const beamW = 4 * pulse;
+          const beamGrad = ctx.createLinearGradient(cx - beamW, 0, cx + beamW, 0);
+          beamGrad.addColorStop(0, "rgba(255,255,255,0)");
+          beamGrad.addColorStop(0.5, "#ffffff");
+          beamGrad.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = beamGrad;
+          ctx.fillRect(cx - beamW, Math.min(baseY, tipY), beamW * 2, Math.abs(tipY - baseY));
+          // Outer glow halo
+          ctx.fillStyle = level.accent + "55";
+          ctx.fillRect(cx - beamW * 2, Math.min(baseY, tipY), beamW * 4, Math.abs(tipY - baseY));
+          // Tip burst
+          ctx.beginPath();
+          ctx.arc(cx, tipY, 3 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
+          ctx.shadowBlur = 0;
         } else if (o.type === "block") {
           const by = groundY - o.y - o.h;
           ctx.fillStyle = level.accent;
