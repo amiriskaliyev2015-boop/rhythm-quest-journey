@@ -75,12 +75,15 @@ function Game({ level, onExit, onWin }: Props) {
 
     const reset = () => {
       scrollX = 0;
-      py = 0;
       vy = 0;
       onGround = true;
       onCeiling = false;
       gravityDir = 1;
       rotation = 0;
+      vehicle = level.startingVehicle;
+      setCurrentVehicle(level.startingVehicle);
+      consumedPortals.clear();
+      py = hasCeil() ? 60 : 0;
       stateRef.current = "playing";
       setProgress(0);
       force((n) => n + 1);
