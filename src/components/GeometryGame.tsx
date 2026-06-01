@@ -947,6 +947,12 @@ export default function GeometryGame() {
                     <span>SPEED {Math.round(lv.speed)}</span>
                     <span>{done ? "✓ DONE" : "~3:00"}</span>
                   </div>
+                  {bestAttempts[i] !== undefined && (
+                    <div className="mt-2 text-[10px] tracking-widest text-white/70">
+                      BEST · {bestAttempts[i]} {bestAttempts[i] === 1 ? "ATTEMPT" : "ATTEMPTS"}
+                    </div>
+                  )}
+
                 </div>
               </button>
             );
