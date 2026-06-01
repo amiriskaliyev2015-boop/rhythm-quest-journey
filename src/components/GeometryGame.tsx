@@ -44,8 +44,19 @@ function Game({ level, onExit, onWin }: Props) {
     resize();
     window.addEventListener("resize", resize);
 
-    const hasCeiling =
-      vehicle === "ship" || vehicle === "ball" || vehicle === "wave";
+    let vehicle: Vehicle = level.startingVehicle;
+    const hasCeil = () => vehicle === "ship" || vehicle === "ball" || vehicle === "wave";
+    const consumedPortals = new Set<number>();
+    let firstFrame = true;
+
+    const switchVehicle = (next: Vehicle) => {
+      vehicle = next;
+      vy = 0;
+      gravityDir = 1;
+      setCurrentVehicle(next);
+      // give a little vertical safety on switch into flying mode
+      if (hasCeil() && py < 20) py = 60;
+    };
 
     // World state
     let scrollX = 0;
