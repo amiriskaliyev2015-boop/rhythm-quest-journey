@@ -159,7 +159,13 @@ const FLAVORS: Flavor[] = [
   { gapMul: 1.15, spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, zigzag: true, laserGate: true, rapid: true },   // 16 eclipse
   { gapMul: 1.1, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, sawField: true, laserGate: true, rapid: true },  // 17 nebula crusher
   { gapMul: 1.05, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, corridor: true, laserGate: true, rapid: true, zigzag: true }, // 18 hyper vortex
-  { gapMul: 0.95, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 19 OMEGA — hardest
+  { gapMul: 0.95, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 19 OMEGA
+  // === Hyper-hard final 5 ===
+  { gapMul: 0.85, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 20
+  { gapMul: 0.8,  spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 21
+  { gapMul: 0.75, spikeBias: 0.4, blockBias: 0.1, sawBias: 0.5, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 22
+  { gapMul: 0.7,  spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 23
+  { gapMul: 0.6,  spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 24 ABSOLUTE ZERO — insane
 ];
 
 
