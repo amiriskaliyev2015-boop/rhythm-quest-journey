@@ -773,34 +773,59 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
 }
 
 export default function GeometryGame() {
-  const [screen, setScreen] = useState<"intro" | "levels" | "playing">("intro");
+  const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
-  const [completed, setCompleted] = useState<Set<number>>(() => {
-    if (typeof window === "undefined") return new Set();
+  // SSR-safe defaults — hydrate from localStorage in an effect to avoid mismatch.
+  const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>({});
+  const [prisms, setPrisms] = useState<number>(0);
+  const [ownedSkins, setOwnedSkins] = useState<Set<string>>(new Set(["default"]));
+  const [equippedSkinId, setEquippedSkinId] = useState<string>("default");
+  const [shopMsg, setShopMsg] = useState<string | null>(null);
+
+  useEffect(() => {
     try {
-      const raw = localStorage.getItem("gd-completed");
-      return new Set(raw ? (JSON.parse(raw) as number[]) : []);
-    } catch {
-      return new Set();
+      const c = localStorage.getItem("gd-completed");
+      if (c) setCompleted(new Set(JSON.parse(c) as number[]));
+      const b = localStorage.getItem("gd-best");
+      if (b) setBestAttempts(JSON.parse(b) as Record<number, number>);
+      const p = localStorage.getItem("gd-prisms");
+      if (p) setPrisms(Number(p) || 0);
+      const o = localStorage.getItem("gd-skins");
+      if (o) setOwnedSkins(new Set(["default", ...(JSON.parse(o) as string[])]));
+      const e = localStorage.getItem("gd-equipped");
+      if (e) setEquippedSkinId(e);
+    } catch {}
+  }, []);
+
+  const equippedSkin = SKINS.find((s) => s.id === equippedSkinId) ?? SKINS[0];
+
+  const buySkin = (id: string) => {
+    const skin = SKINS.find((s) => s.id === id);
+    if (!skin) return;
+    if (ownedSkins.has(id)) {
+      setEquippedSkinId(id);
+      try { localStorage.setItem("gd-equipped", id); } catch {}
+      setShopMsg(`EQUIPPED · ${skin.name.toUpperCase()}`);
+      return;
     }
-  });
-  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>(() => {
-    if (typeof window === "undefined") return {};
+    if (prisms < skin.price) {
+      setShopMsg(`NEED ${skin.price - prisms} MORE ◆`);
+      return;
+    }
+    const nextPrisms = prisms - skin.price;
+    const nextOwned = new Set(ownedSkins);
+    nextOwned.add(id);
+    setPrisms(nextPrisms);
+    setOwnedSkins(nextOwned);
+    setEquippedSkinId(id);
     try {
-      const raw = localStorage.getItem("gd-best");
-      return raw ? (JSON.parse(raw) as Record<number, number>) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [prisms, setPrisms] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      return Number(localStorage.getItem("gd-prisms") || 0) || 0;
-    } catch {
-      return 0;
-    }
-  });
+      localStorage.setItem("gd-prisms", String(nextPrisms));
+      localStorage.setItem("gd-skins", JSON.stringify([...nextOwned].filter((x) => x !== "default")));
+      localStorage.setItem("gd-equipped", id);
+    } catch {}
+    setShopMsg(`UNLOCKED · ${skin.name.toUpperCase()}`);
+  };
 
   const handleWin = useCallback(
     (i: number, info: { attempts: number; reward: number; isNewRecord: boolean }) => {
@@ -841,6 +866,96 @@ export default function GeometryGame() {
     setSelected(null);
     setScreen("levels");
   };
+
+  if (screen === "shop") {
+    return (
+      <div className="min-h-screen px-4 py-12 md:py-16 bg-[#070710]">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+            <button
+              onClick={() => { setShopMsg(null); setScreen("intro"); }}
+              className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm font-bold tracking-widest"
+            >
+              ← BACK
+            </button>
+            <h2
+              className="text-4xl md:text-5xl font-black tracking-[0.2em] bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(120deg, #22d3ee, #a855f7, #f472b6)" }}
+            >
+              SKIN VAULT
+            </h2>
+            <div className="px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
+              <span className="text-cyan-300">◆</span> {prisms}
+            </div>
+          </div>
+          {shopMsg && (
+            <div className="mb-6 text-center text-white tracking-[0.3em] text-sm font-bold animate-pulse">
+              {shopMsg}
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {SKINS.map((s) => {
+              const owned = ownedSkins.has(s.id);
+              const equipped = equippedSkinId === s.id;
+              const canAfford = prisms >= s.price;
+              return (
+                <div
+                  key={s.id}
+                  className="relative overflow-hidden rounded-2xl p-5 border text-white"
+                  style={{
+                    borderColor: equipped ? s.glow : "rgba(255,255,255,0.1)",
+                    background: `linear-gradient(155deg, ${s.primary}33, ${s.glow}22 60%, #0a0a14)`,
+                    boxShadow: equipped ? `0 0 40px -10px ${s.glow}` : undefined,
+                  }}
+                >
+                  <div className="flex items-center justify-between text-[10px] tracking-[0.25em] font-bold">
+                    <span style={{ color: RARITY_COLOR[s.rarity] }}>{s.rarity}</span>
+                    {equipped && <span className="text-white/80">EQUIPPED</span>}
+                  </div>
+                  <div className="my-6 flex justify-center">
+                    <div
+                      className="w-20 h-20 rotate-45 rounded-md"
+                      style={{
+                        background: `radial-gradient(circle at 30% 30%, ${s.secondary}, ${s.primary} 55%, #0b1220)`,
+                        boxShadow: `0 0 30px ${s.glow}`,
+                      }}
+                    />
+                  </div>
+                  <h3 className="text-xl font-black tracking-widest">{s.name.toUpperCase()}</h3>
+                  <p className="text-xs text-white/60 tracking-wider mt-1">{s.tagline}</p>
+                  <button
+                    onClick={() => buySkin(s.id)}
+                    disabled={!owned && !canAfford}
+                    className="mt-5 w-full px-4 py-3 rounded-lg font-black tracking-widest text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: equipped
+                        ? "rgba(255,255,255,0.1)"
+                        : owned
+                        ? "#ffffff"
+                        : `linear-gradient(90deg, ${s.primary}, ${s.glow})`,
+                      color: equipped ? "#ffffff" : owned ? "#000000" : "#ffffff",
+                    }}
+                  >
+                    {equipped
+                      ? "EQUIPPED"
+                      : owned
+                      ? "EQUIP"
+                      : s.price === 0
+                      ? "FREE"
+                      : `◆ ${s.price.toLocaleString()}`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-10 text-center text-white/40 text-xs tracking-widest">
+            EARN ◆ PRISMS BY CLEARING LEVELS · BIGGER REWARDS FOR FEWER ATTEMPTS
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
   if (screen === "intro") {
     return (
