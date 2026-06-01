@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "GD STAR" },
+      { name: "description", content: "Rhythm Runner is a challenging 2D platformer game with 25 levels of increasing difficulty." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "GD STAR" },
+      { property: "og:description", content: "Rhythm Runner is a challenging 2D platformer game with 25 levels of increasing difficulty." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "GD STAR" },
+      { name: "twitter:description", content: "Rhythm Runner is a challenging 2D platformer game with 25 levels of increasing difficulty." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/sEwHo8khwpNSjWCE218uuHTXeh23/social-images/social-1780305947439-1640852766_2-abrakadabra-fun-p-fon-dlya-gd-2.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/sEwHo8khwpNSjWCE218uuHTXeh23/social-images/social-1780305947439-1640852766_2-abrakadabra-fun-p-fon-dlya-gd-2.webp" },
     ],
     links: [
       {
