@@ -90,6 +90,51 @@ const VEHICLES: Vehicle[] = [
 ];
 
 
+// Level "flavor" tweaks density, gap and bias toward certain obstacle types.
+export type Flavor = {
+  // gap multiplier — <1 = tighter, >1 = roomier
+  gapMul: number;
+  // bias toward spike/block/saw mixes — values 0..1, weighted pick
+  spikeBias: number;
+  blockBias: number;
+  sawBias: number;
+  // extra patterns
+  zigzag?: boolean;     // ball: alternating floor/ceiling spikes
+  corridor?: boolean;   // ship/ufo: narrow saw corridors
+  towers?: boolean;     // cube: tall block towers
+  sawField?: boolean;   // many saws at varied heights
+  laserGate?: boolean;  // paired floor+ceiling spikes you must thread
+  rapid?: boolean;      // short gaps everywhere
+};
+
+const FLAVORS: Flavor[] = [
+  { gapMul: 1.15, spikeBias: 0.7, blockBias: 0.2, sawBias: 0.1 },                                   // 0 tutorial
+  { gapMul: 1.0,  spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, corridor: true },                    // 1 ship corridor
+  { gapMul: 0.95, spikeBias: 0.4, blockBias: 0.5, sawBias: 0.1, towers: true },                      // 2 block towers
+  { gapMul: 0.9,  spikeBias: 0.7, blockBias: 0.0, sawBias: 0.3, zigzag: true },                      // 3 ball zigzag
+  { gapMul: 1.05, spikeBias: 0.4, blockBias: 0.1, sawBias: 0.5, sawField: true },                    // 4 ufo saw field
+  { gapMul: 0.85, spikeBias: 0.55, blockBias: 0.35, sawBias: 0.1, rapid: true },                     // 5 cube rapid
+  { gapMul: 1.0,  spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2, laserGate: true },                   // 6 wave laser gates
+  { gapMul: 0.9,  spikeBias: 0.3, blockBias: 0.2, sawBias: 0.5, corridor: true, sawField: true },    // 7 ship saw maze
+  { gapMul: 0.85, spikeBias: 0.8, blockBias: 0.0, sawBias: 0.2, zigzag: true, rapid: true },         // 8 ball rapid zigzag
+  { gapMul: 1.0,  spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, sawField: true, laserGate: true },   // 9 ufo gates
+  { gapMul: 0.8,  spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, rapid: true, laserGate: true },      // 10 wave inferno
+  { gapMul: 0.85, spikeBias: 0.4, blockBias: 0.5, sawBias: 0.1, towers: true, rapid: true },         // 11 cube tower rush
+  { gapMul: 0.8,  spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, corridor: true, laserGate: true },   // 12 ship gauntlet
+  { gapMul: 0.8,  spikeBias: 0.7, blockBias: 0.1, sawBias: 0.2, zigzag: true, laserGate: true },     // 13 ball chaos
+  { gapMul: 0.75, spikeBias: 0.4, blockBias: 0.2, sawBias: 0.4, sawField: true, laserGate: true, rapid: true }, // 14 apex
+];
+
+function pickWeighted(rand: () => number, weights: number[]): number {
+  const total = weights.reduce((s, w) => s + w, 0);
+  let r = rand() * total;
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return i;
+  }
+  return weights.length - 1;
+}
+
 function genSegment(
   vehicle: Vehicle,
   startX: number,
@@ -100,76 +145,113 @@ function genSegment(
   out: Obstacle[],
 ) {
   let x = startX;
-  const minGap = Math.max(140, 320 - idx * 18);
-  const maxGap = Math.max(minGap + 80, 520 - idx * 22);
+  const f = FLAVORS[idx] ?? FLAVORS[FLAVORS.length - 1];
+  const baseMinGap = Math.max(140, 320 - idx * 18);
+  const baseMaxGap = Math.max(baseMinGap + 80, 520 - idx * 22);
+  const minGap = baseMinGap * f.gapMul;
+  const maxGap = baseMaxGap * f.gapMul;
+  let altFlip = false; // for zigzag
   while (x < endX) {
-    const roll = rand();
     const gap = minGap + rand() * (maxGap - minGap);
     if (vehicle === "cube") {
-      if (roll < 0.55) {
-        const count = 1 + Math.floor(rand() * (1 + difficulty * 3));
+      const pick = pickWeighted(rand, [f.spikeBias, f.blockBias, f.sawBias]);
+      if (pick === 0) {
+        const count = 1 + Math.floor(rand() * (1 + difficulty * 3 + (f.rapid ? 1 : 0)));
         for (let i = 0; i < count; i++) out.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
         x += count * 38 + gap;
-      } else if (roll < 0.85) {
-        const stack = 1 + Math.floor(rand() * (1 + difficulty * 2));
+      } else if (pick === 1) {
+        const stack = (f.towers ? 2 : 1) + Math.floor(rand() * (1 + difficulty * 2 + (f.towers ? 1 : 0)));
         const bw = 40;
         for (let i = 0; i < stack; i++) out.push({ type: "block", x, y: i * 40, w: bw, h: 40 });
         if (rand() < 0.4 + difficulty * 0.3) out.push({ type: "spike", x: x + 3, w: 34, h: 30 });
         x += bw + gap;
-      } else if (idx >= 4) {
+      } else {
         out.push({ type: "saw", x, y: 60 + rand() * 50, r: 22 });
         x += 50 + gap;
-      } else {
-        x += gap;
       }
     } else if (vehicle === "ship") {
-      // Ship/rocket: keep floor clear so the player can skim along the ground.
-      if (roll < 0.55) {
+      if (f.corridor && rand() < 0.5) {
+        // narrow corridor: ceiling spike + low saw
         out.push({ type: "spike", x, w: 34, h: 34, flip: true });
-        x += 34 + gap * 0.7;
-      } else if (roll < 0.8) {
-        out.push({ type: "saw", x, y: 120 + rand() * 180, r: 22 });
-        x += 50 + gap;
+        out.push({ type: "saw", x: x + 50, y: 40 + rand() * 60, r: 20 });
+        x += 110 + gap * 0.7;
+      } else if (f.laserGate && rand() < 0.35) {
+        out.push({ type: "spike", x, w: 34, h: 34, flip: true });
+        out.push({ type: "spike", x, w: 34, h: 34 });
+        x += 60 + gap;
       } else {
-        // ceiling laser + mid saw combo
-        out.push({ type: "spike", x, w: 34, h: 34, flip: true });
-        out.push({ type: "saw", x: x + 70, y: 80 + rand() * 120, r: 20 });
-        x += 120 + gap;
+        const pick = pickWeighted(rand, [f.spikeBias, 0.0001, f.sawBias]);
+        if (pick === 0) {
+          out.push({ type: "spike", x, w: 34, h: 34, flip: true });
+          x += 34 + gap * 0.7;
+        } else {
+          out.push({ type: "saw", x, y: 120 + rand() * (f.sawField ? 220 : 180), r: 22 });
+          x += 50 + gap;
+        }
       }
     } else if (vehicle === "ball") {
-      if (roll < 0.45) {
-        out.push({ type: "spike", x, w: 34, h: 34 });
-        x += 34 + gap * 0.8;
-      } else if (roll < 0.85) {
-        out.push({ type: "spike", x, w: 34, h: 34, flip: true });
-        x += 34 + gap * 0.8;
-      } else {
+      if (f.zigzag) {
+        out.push({ type: "spike", x, w: 34, h: 34, flip: altFlip });
+        altFlip = !altFlip;
+        x += 34 + gap * (f.rapid ? 0.55 : 0.8);
+      } else if (f.laserGate && rand() < 0.3) {
         out.push({ type: "spike", x, w: 34, h: 34 });
         out.push({ type: "spike", x: x + 60, w: 34, h: 34, flip: true });
-        x += 100 + gap;
+        x += 110 + gap;
+      } else {
+        const roll = rand();
+        if (roll < 0.45) {
+          out.push({ type: "spike", x, w: 34, h: 34 });
+          x += 34 + gap * 0.8;
+        } else if (roll < 0.85) {
+          out.push({ type: "spike", x, w: 34, h: 34, flip: true });
+          x += 34 + gap * 0.8;
+        } else {
+          out.push({ type: "saw", x, y: 60 + rand() * 100, r: 22 });
+          x += 50 + gap;
+        }
       }
     } else if (vehicle === "ufo") {
-      if (roll < 0.55) {
-        const count = 1 + Math.floor(rand() * (1 + difficulty * 2));
-        for (let i = 0; i < count; i++) out.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
-        x += count * 38 + gap;
-      } else if (roll < 0.85) {
-        out.push({ type: "spike", x, w: 34, h: 34, flip: true });
-        x += 34 + gap;
+      if (f.sawField && rand() < 0.5) {
+        const c = 1 + Math.floor(rand() * 2);
+        for (let i = 0; i < c; i++) out.push({ type: "saw", x: x + i * 70, y: 60 + rand() * 220, r: 20 });
+        x += c * 70 + gap;
+      } else if (f.laserGate && rand() < 0.3) {
+        out.push({ type: "spike", x, w: 34, h: 34 });
+        out.push({ type: "spike", x: x + 10, w: 34, h: 34, flip: true });
+        x += 80 + gap;
       } else {
-        out.push({ type: "saw", x, y: 100 + rand() * 160, r: 22 });
-        x += 50 + gap;
+        const pick = pickWeighted(rand, [f.spikeBias, 0.0001, f.sawBias]);
+        if (pick === 0) {
+          const count = 1 + Math.floor(rand() * (1 + difficulty * 2));
+          for (let i = 0; i < count; i++) out.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
+          x += count * 38 + gap;
+        } else {
+          out.push({ type: "saw", x, y: 100 + rand() * 160, r: 22 });
+          x += 50 + gap;
+        }
       }
     } else {
-      if (roll < 0.5) {
+      // wave
+      if (f.laserGate && rand() < 0.4) {
         out.push({ type: "spike", x, w: 30, h: 30 });
-        x += 30 + gap * 0.6;
-      } else if (roll < 0.9) {
-        out.push({ type: "spike", x, w: 30, h: 30, flip: true });
-        x += 30 + gap * 0.6;
+        out.push({ type: "spike", x: x + 50, w: 30, h: 30, flip: true });
+        x += 90 + gap * 0.7;
+      } else if (f.rapid) {
+        out.push({ type: "spike", x, w: 30, h: 30, flip: rand() < 0.5 });
+        x += 30 + gap * 0.45;
       } else {
-        out.push({ type: "saw", x, y: 120 + rand() * 120, r: 20 });
-        x += 50 + gap * 0.7;
+        const roll = rand();
+        if (roll < 0.5) {
+          out.push({ type: "spike", x, w: 30, h: 30 });
+          x += 30 + gap * 0.6;
+        } else if (roll < 0.9) {
+          out.push({ type: "spike", x, w: 30, h: 30, flip: true });
+          x += 30 + gap * 0.6;
+        } else {
+          out.push({ type: "saw", x, y: 120 + rand() * 120, r: 20 });
+          x += 50 + gap * 0.7;
+        }
       }
     }
   }
