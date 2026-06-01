@@ -272,7 +272,7 @@ function Game({ level, onExit, onWin }: Props) {
             onGround = false;
           }
         }
-        if (hasCeiling && py >= ceilingPy) {
+        if (hasCeil() && py >= ceilingPy) {
           py = ceilingPy;
           if (vehicle === "wave") die();
           vy = 0;
@@ -335,7 +335,7 @@ function Game({ level, onExit, onWin }: Props) {
       ctx.stroke();
 
       // ceiling for flying vehicles
-      if (hasCeiling) {
+      if (hasCeil()) {
         const ceilY = groundY - CEIL_HEIGHT;
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.fillRect(0, 0, w, ceilY);
