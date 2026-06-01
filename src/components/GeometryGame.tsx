@@ -267,8 +267,6 @@ function Game({ level, onExit, onWin }: Props) {
         if (!landedOnBlock) {
           if (py <= 0) {
             py = 0;
-            // wave dies on touching the ground
-            if (vehicle === "wave") die();
             vy = 0;
             onGround = true;
           } else {
@@ -277,7 +275,6 @@ function Game({ level, onExit, onWin }: Props) {
         }
         if (hasCeil() && py >= ceilingPy) {
           py = ceilingPy;
-          if (vehicle === "wave") die();
           vy = 0;
           onCeiling = true;
         }
