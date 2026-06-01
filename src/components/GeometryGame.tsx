@@ -773,6 +773,13 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
           {Math.floor(progress * 100)}%
         </div>
         <div className="text-sm font-bold opacity-80">ATTEMPT {attempts}</div>
+        <button
+          onClick={() => setMuted((m) => !m)}
+          className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur text-sm font-bold tracking-wider"
+          title={muted ? "Unmute music" : "Mute music"}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
       </div>
 
       {state === "dead" && (
