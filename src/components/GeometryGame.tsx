@@ -64,7 +64,7 @@ const VEHICLE_LABELS: Record<Vehicle, string> = {
   wave: "BOLT",
 };
 
-function Game({ level, bestAttempts, onExit, onWin }: Props) {
+function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
   const [winInfo, setWinInfo] = useState<{ reward: number; isNewRecord: boolean } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
