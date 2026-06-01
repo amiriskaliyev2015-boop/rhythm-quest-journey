@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
+import { LevelMusic } from "@/lib/game-music";
 
 const GROUND_H = 80;
 const PLAYER_SIZE = 40;
@@ -81,6 +82,41 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
   }, []);
 
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle>(level.startingVehicle);
+
+  // Per-level procedural music.
+  const [muted, setMuted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("gd_muted") === "1";
+  });
+  const musicRef = useRef<LevelMusic | null>(null);
+  useEffect(() => {
+    const music = new LevelMusic(level.index);
+    music.setMuted(muted);
+    musicRef.current = music;
+    // Browsers require a user gesture for AudioContext; start on first interaction.
+    const begin = () => {
+      music.start();
+      window.removeEventListener("pointerdown", begin);
+      window.removeEventListener("keydown", begin);
+    };
+    // Try immediately (works if a gesture already happened), and also on next input.
+    music.start();
+    window.addEventListener("pointerdown", begin);
+    window.addEventListener("keydown", begin);
+    return () => {
+      window.removeEventListener("pointerdown", begin);
+      window.removeEventListener("keydown", begin);
+      music.stop();
+      musicRef.current = null;
+    };
+  }, [level.index]);
+  useEffect(() => {
+    musicRef.current?.setMuted(muted);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("gd_muted", muted ? "1" : "0");
+    }
+  }, [muted]);
+
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -737,6 +773,13 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
           {Math.floor(progress * 100)}%
         </div>
         <div className="text-sm font-bold opacity-80">ATTEMPT {attempts}</div>
+        <button
+          onClick={() => setMuted((m) => !m)}
+          className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur text-sm font-bold tracking-wider"
+          title={muted ? "Unmute music" : "Mute music"}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
       </div>
 
       {state === "dead" && (
