@@ -1,15 +1,20 @@
-// Geometry Dash-like game engine. Procedurally generates 11 levels of
-// increasing difficulty. Each level is ~3 minutes long at level speed.
+// Geometry runner engine. 11 levels with progressive difficulty and
+// different vehicle types (cube/ship/ball/ufo/wave).
+
+export type Vehicle = "cube" | "ship" | "ball" | "ufo" | "wave";
 
 export type Obstacle =
-  | { type: "spike"; x: number; w: number; h: number }
+  | { type: "spike"; x: number; w: number; h: number; flip?: boolean }
   | { type: "block"; x: number; y: number; w: number; h: number }
   | { type: "saw"; x: number; y: number; r: number };
+
+export const CEIL_HEIGHT = 360; // play area height for flying vehicles
 
 export interface Level {
   index: number;
   name: string;
-  speed: number; // px per second
+  vehicle: Vehicle;
+  speed: number;
   gravity: number;
   jump: number;
   bgFrom: string;
@@ -17,10 +22,9 @@ export interface Level {
   accent: string;
   durationSec: number;
   obstacles: Obstacle[];
-  length: number; // total scroll length in px
+  length: number;
 }
 
-// Seeded RNG so each level is deterministic.
 function mulberry32(seed: number) {
   return function () {
     let t = (seed += 0x6d2b79f5);
@@ -44,31 +48,47 @@ const PALETTES = [
   ["#f43f5e", "#4c0519", "#fb7185"],
 ];
 
+// Original level names (different from GD)
 const NAMES = [
-  "Stereo Madness",
-  "Back On Track",
-  "Polargeist",
-  "Dry Out",
-  "Base After Base",
-  "Cant Let Go",
-  "Jumper",
-  "Time Machine",
-  "Cycles",
-  "xStep",
-  "Clutterfunk",
+  "Neon Pulse",
+  "Sky Glide",
+  "Frostbyte",
+  "Rolling Static",
+  "Saucer Run",
+  "Crimson Drop",
+  "Wave Surge",
+  "Astro Cruiser",
+  "Pendulum",
+  "Hover Storm",
+  "Final Circuit",
+];
+
+const VEHICLES: Vehicle[] = [
+  "cube",  // 1
+  "ship",  // 2
+  "cube",  // 3
+  "ball",  // 4
+  "ufo",   // 5
+  "cube",  // 6
+  "wave",  // 7
+  "ship",  // 8
+  "ball",  // 9
+  "ufo",   // 10
+  "wave",  // 11
 ];
 
 export function buildLevel(idx: number): Level {
   const rand = mulberry32(1337 + idx * 7919);
-  const difficulty = idx / 10; // 0..1
-  const speed = 320 + idx * 28; // 320 -> 600 px/s
+  const difficulty = idx / 10;
+  const speed = 320 + idx * 28;
   const gravity = 2400 + idx * 80;
   const jump = 780 + idx * 18;
   const durationSec = 180;
   const length = speed * durationSec;
+  const vehicle = VEHICLES[idx] ?? "cube";
+  const hasCeiling = vehicle === "ship" || vehicle === "ball" || vehicle === "wave";
 
   const obstacles: Obstacle[] = [];
-  // First 4 seconds: empty runway
   let x = speed * 4;
   const minGap = Math.max(140, 320 - idx * 18);
   const maxGap = Math.max(minGap + 80, 520 - idx * 22);
@@ -77,49 +97,93 @@ export function buildLevel(idx: number): Level {
     const roll = rand();
     const gap = minGap + rand() * (maxGap - minGap);
 
-    if (roll < 0.55) {
-      // spikes (1..1+difficulty*3)
-      const count = 1 + Math.floor(rand() * (1 + difficulty * 3));
-      for (let i = 0; i < count; i++) {
-        obstacles.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
+    if (vehicle === "cube") {
+      // Classic ground obstacles
+      if (roll < 0.55) {
+        const count = 1 + Math.floor(rand() * (1 + difficulty * 3));
+        for (let i = 0; i < count; i++) {
+          obstacles.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
+        }
+        x += count * 38 + gap;
+      } else if (roll < 0.85) {
+        const stack = 1 + Math.floor(rand() * (1 + difficulty * 2));
+        const bw = 40;
+        for (let i = 0; i < stack; i++) {
+          obstacles.push({ type: "block", x, y: i * 40, w: bw, h: 40 });
+        }
+        if (rand() < 0.4 + difficulty * 0.3) {
+          obstacles.push({ type: "spike", x: x + 3, w: 34, h: 30 });
+        }
+        x += bw + gap;
+      } else if (idx >= 4) {
+        obstacles.push({ type: "saw", x, y: 60 + rand() * 50, r: 22 });
+        x += 50 + gap;
+      } else {
+        x += gap;
       }
-      x += count * 38 + gap;
-    } else if (roll < 0.85) {
-      // block stack with spike on top (sometimes)
-      const stack = 1 + Math.floor(rand() * (1 + difficulty * 2));
-      const bw = 40;
-      for (let i = 0; i < stack; i++) {
-        obstacles.push({
-          type: "block",
-          x,
-          y: i * 40,
-          w: bw,
-          h: 40,
-        });
+    } else if (vehicle === "ship") {
+      // Narrow corridors: spikes from floor and ceiling
+      if (roll < 0.5) {
+        obstacles.push({ type: "spike", x, w: 34, h: 34 });
+        x += 34 + gap * 0.7;
+      } else if (roll < 0.85) {
+        obstacles.push({ type: "spike", x, w: 34, h: 34, flip: true });
+        x += 34 + gap * 0.7;
+      } else {
+        obstacles.push({ type: "saw", x, y: 80 + rand() * 200, r: 22 });
+        x += 50 + gap;
       }
-      if (rand() < 0.4 + difficulty * 0.3) {
-        obstacles.push({ type: "spike", x: x + 3, w: 34, h: 30 });
+    } else if (vehicle === "ball") {
+      // Floor and ceiling spikes (gravity flip)
+      if (roll < 0.45) {
+        obstacles.push({ type: "spike", x, w: 34, h: 34 });
+        x += 34 + gap * 0.8;
+      } else if (roll < 0.85) {
+        obstacles.push({ type: "spike", x, w: 34, h: 34, flip: true });
+        x += 34 + gap * 0.8;
+      } else {
+        // pair: floor + ceiling
+        obstacles.push({ type: "spike", x, w: 34, h: 34 });
+        obstacles.push({ type: "spike", x: x + 60, w: 34, h: 34, flip: true });
+        x += 100 + gap;
       }
-      x += bw + gap;
-    } else if (idx >= 4) {
-      // floating saw - requires careful jump
-      obstacles.push({
-        type: "saw",
-        x,
-        y: 60 + rand() * 50,
-        r: 22,
-      });
-      x += 50 + gap;
+    } else if (vehicle === "ufo") {
+      // Mostly floor spikes, occasional saws and ceiling spikes
+      if (roll < 0.55) {
+        const count = 1 + Math.floor(rand() * (1 + difficulty * 2));
+        for (let i = 0; i < count; i++) {
+          obstacles.push({ type: "spike", x: x + i * 38, w: 34, h: 34 });
+        }
+        x += count * 38 + gap;
+      } else if (roll < 0.85) {
+        obstacles.push({ type: "spike", x, w: 34, h: 34, flip: true });
+        x += 34 + gap;
+      } else {
+        obstacles.push({ type: "saw", x, y: 100 + rand() * 160, r: 22 });
+        x += 50 + gap;
+      }
     } else {
-      // gap (rest)
-      x += gap;
+      // wave: tight zig-zag spikes
+      if (roll < 0.5) {
+        obstacles.push({ type: "spike", x, w: 30, h: 30 });
+        x += 30 + gap * 0.6;
+      } else if (roll < 0.9) {
+        obstacles.push({ type: "spike", x, w: 30, h: 30, flip: true });
+        x += 30 + gap * 0.6;
+      } else {
+        obstacles.push({ type: "saw", x, y: 120 + rand() * 120, r: 20 });
+        x += 50 + gap * 0.7;
+      }
     }
+
+    void hasCeiling;
   }
 
   const palette = PALETTES[idx % PALETTES.length];
   return {
     index: idx,
     name: NAMES[idx] ?? `Level ${idx + 1}`,
+    vehicle,
     speed,
     gravity,
     jump,
