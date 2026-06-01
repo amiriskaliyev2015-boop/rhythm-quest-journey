@@ -61,6 +61,7 @@ const PALETTES = [
   ["#001a33", "#000000", "#00e5ff"],
   ["#1a1a00", "#000000", "#ffea00"],
   ["#000000", "#0a0a0a", "#ffffff"],
+  ["#1a0000", "#000000", "#ff0040"],
 ];
 
 
@@ -90,6 +91,7 @@ const NAMES = [
   "Chrono Shatter",
   "Singularity Collapse",
   "Absolute Zero",
+  "Spike Hell",
 ];
 
 const VEHICLES: Vehicle[] = [
@@ -118,6 +120,7 @@ const VEHICLES: Vehicle[] = [
   "ufo",
   "ball",
   "wave",
+  "cube",
 ];
 
 
@@ -166,6 +169,8 @@ const FLAVORS: Flavor[] = [
   { gapMul: 0.75, spikeBias: 0.4, blockBias: 0.1, sawBias: 0.5, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 22
   { gapMul: 0.7,  spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 23
   { gapMul: 0.6,  spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 24 ABSOLUTE ZERO — insane
+  // === Level 26 — SPIKE HELL: only spikes, hard ===
+  { gapMul: 0.7, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true }, // 25 spikes only
 ];
 
 
@@ -305,7 +310,7 @@ const ALL_VEHICLES: Vehicle[] = ["cube", "ship", "ball", "ufo", "wave"];
 
 export function buildLevel(idx: number): Level {
   const rand = mulberry32(1337 + idx * 7919);
-  const difficulty = idx / 24;
+  const difficulty = idx / 25;
   const speed = 380 + idx * 16;
   const gravity = 2400 + idx * 70;
   const jump = 780 + idx * 14;
@@ -355,4 +360,4 @@ export function buildLevel(idx: number): Level {
   };
 }
 
-export const LEVELS: Level[] = Array.from({ length: 25 }, (_, i) => buildLevel(i));
+export const LEVELS: Level[] = Array.from({ length: 26 }, (_, i) => buildLevel(i));
