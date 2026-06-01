@@ -51,7 +51,13 @@ const PALETTES = [
   ["#eab308", "#422006", "#fde68a"],
   ["#3b82f6", "#1e1b4b", "#93c5fd"],
   ["#dc2626", "#450a0a", "#fca5a5"],
+  ["#10b981", "#022c22", "#6ee7b7"],
+  ["#7c3aed", "#1e1b4b", "#a78bfa"],
+  ["#f472b6", "#500724", "#fda4af"],
+  ["#0891b2", "#083344", "#22d3ee"],
+  ["#000000", "#1a0000", "#ff0033"],
 ];
+
 
 const NAMES = [
   "Neon Pulse",
@@ -69,6 +75,11 @@ const NAMES = [
   "Solar Flare",
   "Void Runner",
   "Apex Singularity",
+  "Quantum Rift",
+  "Eclipse Protocol",
+  "Nebula Crusher",
+  "Hyper Vortex",
+  "Omega Annihilation",
 ];
 
 const VEHICLES: Vehicle[] = [
@@ -87,7 +98,13 @@ const VEHICLES: Vehicle[] = [
   "ship",
   "ball",
   "wave",
+  "ufo",
+  "ship",
+  "ball",
+  "wave",
+  "cube",
 ];
+
 
 
 // Level "flavor" tweaks density, gap and bias toward certain obstacle types.
@@ -123,7 +140,13 @@ const FLAVORS: Flavor[] = [
   { gapMul: 1.2, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, corridor: true, laserGate: true },   // 12 ship gauntlet
   { gapMul: 1.2, spikeBias: 0.7, blockBias: 0.1, sawBias: 0.2, zigzag: true, laserGate: true },     // 13 ball chaos
   { gapMul: 1.15, spikeBias: 0.4, blockBias: 0.2, sawBias: 0.4, sawField: true, laserGate: true, rapid: true }, // 14 apex
+  { gapMul: 1.2, spikeBias: 0.5, blockBias: 0.2, sawBias: 0.3, corridor: true, sawField: true },                // 15 quantum rift
+  { gapMul: 1.15, spikeBias: 0.6, blockBias: 0.1, sawBias: 0.3, zigzag: true, laserGate: true, rapid: true },   // 16 eclipse
+  { gapMul: 1.1, spikeBias: 0.3, blockBias: 0.1, sawBias: 0.6, sawField: true, laserGate: true, rapid: true },  // 17 nebula crusher
+  { gapMul: 1.05, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, corridor: true, laserGate: true, rapid: true, zigzag: true }, // 18 hyper vortex
+  { gapMul: 0.95, spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 19 OMEGA — hardest
 ];
+
 
 function pickWeighted(rand: () => number, weights: number[]): number {
   const total = weights.reduce((s, w) => s + w, 0);
@@ -261,10 +284,11 @@ const ALL_VEHICLES: Vehicle[] = ["cube", "ship", "ball", "ufo", "wave"];
 
 export function buildLevel(idx: number): Level {
   const rand = mulberry32(1337 + idx * 7919);
-  const difficulty = idx / 14;
+  const difficulty = idx / 19;
   const speed = 380 + idx * 16;
   const gravity = 2400 + idx * 70;
   const jump = 780 + idx * 14;
+
   const durationSec = 90;
   const length = speed * durationSec;
   const startingVehicle = VEHICLES[idx] ?? "cube";
@@ -310,4 +334,4 @@ export function buildLevel(idx: number): Level {
   };
 }
 
-export const LEVELS: Level[] = Array.from({ length: 15 }, (_, i) => buildLevel(i));
+export const LEVELS: Level[] = Array.from({ length: 20 }, (_, i) => buildLevel(i));
