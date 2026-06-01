@@ -197,7 +197,7 @@ function genSegment(
       } else if (f.laserGate && rand() < 0.3) {
         out.push({ type: "spike", x, w: 34, h: 34 });
         out.push({ type: "spike", x: x + 60, w: 34, h: 34, flip: true });
-        x += 110 + gap;
+        x += 150 + gap;
       } else {
         const roll = rand();
         if (roll < 0.45) {
@@ -219,7 +219,7 @@ function genSegment(
       } else if (f.laserGate && rand() < 0.3) {
         out.push({ type: "spike", x, w: 34, h: 34 });
         out.push({ type: "spike", x: x + 10, w: 34, h: 34, flip: true });
-        x += 80 + gap;
+        x += 120 + gap;
       } else {
         const pick = pickWeighted(rand, [f.spikeBias, 0.0001, f.sawBias]);
         if (pick === 0) {
@@ -236,7 +236,7 @@ function genSegment(
       if (f.laserGate && rand() < 0.4) {
         out.push({ type: "spike", x, w: 30, h: 30 });
         out.push({ type: "spike", x: x + 50, w: 30, h: 30, flip: true });
-        x += 90 + gap * 0.7;
+        x += 130 + gap * 0.7;
       } else if (f.rapid) {
         out.push({ type: "spike", x, w: 30, h: 30, flip: rand() < 0.5 });
         x += 30 + gap * 0.45;
