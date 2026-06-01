@@ -705,6 +705,23 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
             <div className="text-6xl font-black tracking-widest" style={{ color: level.accent }}>
               LEVEL COMPLETE
             </div>
+            {winInfo && (
+              <div className="mt-4 space-y-1">
+                {winInfo.isNewRecord && (
+                  <div className="text-yellow-300 font-bold tracking-[0.3em] text-sm animate-pulse">
+                    ★ NEW RECORD · {attempts} {attempts === 1 ? "ATTEMPT" : "ATTEMPTS"} ★
+                  </div>
+                )}
+                <div className="text-white text-2xl font-black tracking-widest">
+                  +{winInfo.reward} ◆ PRISMS
+                </div>
+                {bestAttempts !== null && !winInfo.isNewRecord && (
+                  <div className="text-white/60 text-xs tracking-widest">
+                    BEST: {bestAttempts} · BEAT IT FOR BONUS
+                  </div>
+                )}
+              </div>
+            )}
             <button
               onClick={onExit}
               className="mt-6 px-6 py-3 rounded-lg bg-white text-black font-bold tracking-widest hover:scale-105 transition"
@@ -714,6 +731,7 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
           </div>
         </div>
       )}
+
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs tracking-widest">
         {hint}
