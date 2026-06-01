@@ -360,4 +360,4 @@ export function buildLevel(idx: number): Level {
   };
 }
 
-export const LEVELS: Level[] = Array.from({ length: 25 }, (_, i) => buildLevel(i));
+export const LEVELS: Level[] = Array.from({ length: 26 }, (_, i) => buildLevel(i));
