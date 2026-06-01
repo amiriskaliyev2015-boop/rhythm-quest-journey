@@ -993,17 +993,27 @@ export default function GeometryGame() {
             15 Levels &middot; 5 Vehicles &middot; Rhythm Runner
           </p>
 
-          <button
-            onClick={() => setScreen("levels")}
-            className="mt-12 px-16 py-5 text-2xl font-black tracking-[0.2em] text-black bg-white rounded-full
-                       hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] active:scale-95
-                       transition-all duration-200"
-          >
-            PLAY
-          </button>
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={() => setScreen("levels")}
+              className="px-14 py-5 text-2xl font-black tracking-[0.2em] text-black bg-white rounded-full
+                         hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] active:scale-95
+                         transition-all duration-200"
+            >
+              PLAY
+            </button>
+            <button
+              onClick={() => { setShopMsg(null); setScreen("shop"); }}
+              className="px-10 py-5 text-xl font-black tracking-[0.2em] text-white rounded-full border-2 border-white/30
+                         hover:border-white/70 hover:scale-105 active:scale-95 transition-all duration-200
+                         bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10"
+            >
+              ◆ SHOP
+            </button>
+          </div>
 
-          <p className="mt-8 text-white/30 text-xs tracking-widest">
-            ◆ {prisms} PRISMS
+          <p className="mt-8 text-white/40 text-xs tracking-widest">
+            ◆ {prisms.toLocaleString()} PRISMS · {ownedSkins.size}/{SKINS.length} SKINS
           </p>
           <p className="mt-2 text-white/30 text-xs tracking-widest">
             GEM · ROCKET · STAR · RHOMB · BOLT
@@ -1020,6 +1030,7 @@ export default function GeometryGame() {
         key={selected}
         level={level}
         bestAttempts={bestAttempts[selected] ?? null}
+        skin={equippedSkin}
         onExit={goToMenu}
         onWin={(info) => handleWin(selected, info)}
       />
