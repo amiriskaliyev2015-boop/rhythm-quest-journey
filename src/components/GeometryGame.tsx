@@ -296,8 +296,21 @@ function Game({ level, onExit, onWin }: Props) {
           rotation = 0;
         }
 
+        // ----- PORTALS -----
+        for (let i = 0; i < level.obstacles.length; i++) {
+          const o = level.obstacles[i];
+          if (o.type !== "portal") continue;
+          if (consumedPortals.has(i)) continue;
+          const ox = o.x - scrollX;
+          if (ox <= PLAYER_X + PLAYER_SIZE / 2 && ox > PLAYER_X - 200) {
+            consumedPortals.add(i);
+            switchVehicle(o.vehicle);
+          }
+        }
+
         // ----- COLLISIONS -----
         for (const o of level.obstacles) {
+          if (o.type === "portal") continue;
           const ox = (o as { x: number }).x - scrollX;
           if (ox > w + 60 || ox < -120) continue;
           const r = collides(o, groundY);
