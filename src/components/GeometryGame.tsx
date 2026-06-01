@@ -425,6 +425,31 @@ function Game({ level, onExit, onWin }: Props) {
           ctx.arc(0, 0, o.r * 0.35, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
+        } else if (o.type === "portal") {
+          // Vertical portal gate spanning play area
+          const topY = groundY - CEIL_HEIGHT;
+          const colorMap: Record<Vehicle, string> = {
+            cube: "#fbbf24",
+            ship: "#ec4899",
+            ball: "#22d3ee",
+            ufo: "#a855f7",
+            wave: "#84cc16",
+          };
+          const c = colorMap[o.vehicle];
+          const grd = ctx.createLinearGradient(ox, 0, ox + 40, 0);
+          grd.addColorStop(0, "rgba(255,255,255,0)");
+          grd.addColorStop(0.5, c);
+          grd.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = grd;
+          ctx.fillRect(ox - 4, topY, 48, CEIL_HEIGHT);
+          ctx.strokeStyle = c;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(ox + 4, topY + 4, 32, CEIL_HEIGHT - 8);
+          // label
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "bold 11px system-ui";
+          ctx.textAlign = "center";
+          ctx.fillText(VEHICLE_LABELS[o.vehicle], ox + 20, topY + CEIL_HEIGHT / 2);
         }
       }
 
