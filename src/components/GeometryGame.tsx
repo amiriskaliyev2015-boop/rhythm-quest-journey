@@ -669,7 +669,7 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       canvas.removeEventListener("pointerdown", pointerDown);
       canvas.removeEventListener("pointerup", pointerUp);
     };
-  }, [level, onExit, onWin]);
+  }, [level, skin, onExit, onWin]);
 
   const state = stateRef.current;
 
