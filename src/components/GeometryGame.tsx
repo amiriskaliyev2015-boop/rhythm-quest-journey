@@ -111,9 +111,13 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
     const win = () => {
       if (stateRef.current !== "playing") return;
       stateRef.current = "won";
+      const a = attemptsRef.current;
+      const { reward, isNewRecord } = computeReward(level.index, a, bestAttempts);
+      setWinInfo({ reward, isNewRecord });
       force((n) => n + 1);
-      onWin();
+      onWin({ attempts: a, reward, isNewRecord });
     };
+
 
     const handlePress = () => {
       inputHeld = true;
