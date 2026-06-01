@@ -40,6 +40,12 @@ function Game({ level, bestAttempts, onExit, onWin }: Props) {
   const [, force] = useState(0);
   const [progress, setProgress] = useState(0);
   const [attempts, setAttempts] = useState(1);
+  const attemptsRef = useRef(1);
+  const bumpAttempts = useCallback(() => {
+    attemptsRef.current += 1;
+    setAttempts(attemptsRef.current);
+  }, []);
+
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle>(level.startingVehicle);
 
   useEffect(() => {
