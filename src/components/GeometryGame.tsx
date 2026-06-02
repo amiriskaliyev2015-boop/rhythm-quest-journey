@@ -994,12 +994,16 @@ export default function GeometryGame() {
                   </div>
                   <div className="my-6 flex justify-center">
                     <div
-                      className="w-20 h-20 rotate-45 rounded-md"
+                      className="w-20 h-20 rotate-45 rounded-md flex items-center justify-center"
                       style={{
                         background: `radial-gradient(circle at 30% 30%, ${s.secondary}, ${s.primary} 55%, #0b1220)`,
                         boxShadow: `0 0 30px ${s.glow}`,
                       }}
-                    />
+                    >
+                      <span className="-rotate-45 text-4xl select-none" style={{ filter: `drop-shadow(0 2px 4px ${s.glow})` }}>
+                        {s.face}
+                      </span>
+                    </div>
                   </div>
                   <h3 className="text-xl font-black tracking-widest">{s.name.toUpperCase()}</h3>
                   <p className="text-xs text-white/60 tracking-wider mt-1">{s.tagline}</p>
