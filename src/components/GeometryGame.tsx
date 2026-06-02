@@ -177,6 +177,7 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       setCurrentVehicle(level.startingVehicle);
       consumedPortals.clear();
       py = hasCeil() ? 60 : 0;
+      trail.length = 0;
       stateRef.current = "playing";
       setProgress(0);
       force((n) => n + 1);
