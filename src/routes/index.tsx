@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import GeometryGame from "@/components/GeometryGame";
+import { AuthBadge } from "@/components/AuthBadge";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,5 +31,10 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  return <GeometryGame />;
+  return (
+    <>
+      <AuthBadge />
+      <GeometryGame />
+    </>
+  );
 }
