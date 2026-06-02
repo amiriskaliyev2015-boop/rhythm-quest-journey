@@ -772,7 +772,18 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       if (skin.face) {
         ctx.rotate(-rotation);
         ctx.shadowBlur = 0;
-        ctx.font = `${Math.floor(PLAYER_SIZE * 0.62)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui`;
+        ctx.shadowOffsetY = 0;
+        // white "face" backdrop so emoji is always readable on any cube color
+        const faceR = PLAYER_SIZE * 0.32;
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, faceR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#0f172a";
+        ctx.font = `${Math.floor(PLAYER_SIZE * 0.5)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(skin.face, 0, 2);
