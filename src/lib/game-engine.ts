@@ -173,6 +173,8 @@ const FLAVORS: Flavor[] = [
   { gapMul: 0.6,  spikeBias: 0.5, blockBias: 0.1, sawBias: 0.4, sawField: true, laserGate: true, rapid: true, zigzag: true, corridor: true, towers: true }, // 24 ABSOLUTE ZERO — insane
   // === Level 26 — SPIKE HELL: only spikes, hard ===
   { gapMul: 0.7, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true }, // 25 spikes only
+  // === Level 27 — ARROW APOCALYPSE: wave only, all spikes, hyper mega hard ===
+  { gapMul: 0.5, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true, laserGate: true }, // 26
 ];
 
 
