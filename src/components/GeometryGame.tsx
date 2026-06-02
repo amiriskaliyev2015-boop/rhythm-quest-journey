@@ -160,6 +160,9 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
     let running = true;
     let inputHeld = false;
     let prevHeld = false;
+    // Trail: recent player positions in screen space
+    const trail: { x: number; y: number; v: Vehicle; held: boolean }[] = [];
+    const TRAIL_MAX = 28;
 
     
 
