@@ -703,6 +703,16 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
         ctx.shadowBlur = 0;
         ctx.stroke();
       }
+
+      // Funny face overlay (keep upright by counter-rotating)
+      if (skin.face) {
+        ctx.rotate(-rotation);
+        ctx.shadowBlur = 0;
+        ctx.font = `${Math.floor(PLAYER_SIZE * 0.62)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(skin.face, 0, 2);
+      }
       ctx.restore();
 
       // wave trail
