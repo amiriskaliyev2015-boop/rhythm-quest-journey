@@ -349,6 +349,18 @@ export function buildLevel(idx: number): Level {
   }
   genSegment(currentVehicle, cursor, length - speed * 3, rand, difficulty, idx, obstacles);
 
+  // Remove spikes that are too close to portals (impossible to react in time)
+  const portalXs = obstacles
+    .filter((o) => o.type === "portal")
+    .map((o) => o.x);
+  const SAFE_DIST = 180;
+  const filtered = obstacles.filter((o) => {
+    if (o.type !== "spike") return true;
+    return !portalXs.some((px) => Math.abs(o.x - px) < SAFE_DIST);
+  });
+  obstacles.length = 0;
+  obstacles.push(...filtered);
+
   const palette = PALETTES[idx % PALETTES.length];
   return {
     index: idx,
