@@ -39,7 +39,9 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        setInfo("Регистрация успешна! Проверьте почту для подтверждения.");
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInErr) throw signInErr;
+        navigate({ to: "/", replace: true });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
