@@ -316,6 +316,11 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
         if (vehicle === "cube") {
           vy -= level.gravity * dt;
           py += vy * dt;
+          // No tap-delay: holding the button auto-jumps the moment cube touches ground
+          if (inputHeld && onGround) {
+            vy = level.jump;
+            onGround = false;
+          }
         } else if (vehicle === "ship") {
           const thrust = level.gravity * 0.9;
           vy += (inputHeld ? thrust : -thrust) * dt;
