@@ -17,18 +17,19 @@ export interface Skin {
   glow: string;      // outer glow / shadow
   price: number;
   rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "MYTHIC";
+  face: string;      // funny face emoji
 }
 
 export const SKINS: Skin[] = [
-  { id: "default",  name: "Prism",      tagline: "Default refraction",         primary: "#22d3ee", secondary: "#ffffff", glow: "#22d3ee", price: 0,    rarity: "COMMON" },
-  { id: "ember",    name: "Ember",      tagline: "Forged in molten neon",      primary: "#f97316", secondary: "#fde047", glow: "#ef4444", price: 350,  rarity: "COMMON" },
-  { id: "toxic",    name: "Toxic",      tagline: "Bio-luminescent ooze",       primary: "#84cc16", secondary: "#bef264", glow: "#22c55e", price: 600,  rarity: "RARE" },
-  { id: "abyss",    name: "Abyss",      tagline: "Bottled deep-sea pressure",  primary: "#0ea5e9", secondary: "#67e8f9", glow: "#1e3a8a", price: 900,  rarity: "RARE" },
-  { id: "rose",     name: "Rose Quartz",tagline: "Crystalline pink halo",      primary: "#ec4899", secondary: "#fbcfe8", glow: "#f43f5e", price: 1400, rarity: "EPIC" },
-  { id: "void",     name: "Void",       tagline: "Light bends around it",      primary: "#1f2937", secondary: "#a855f7", glow: "#a855f7", price: 2200, rarity: "EPIC" },
-  { id: "solar",    name: "Solar Flare",tagline: "Plasma forged outside time", primary: "#facc15", secondary: "#ffffff", glow: "#f97316", price: 3500, rarity: "LEGENDARY" },
-  { id: "aurora",   name: "Aurora",     tagline: "Polar sky on glass",         primary: "#a855f7", secondary: "#22d3ee", glow: "#ec4899", price: 5500, rarity: "LEGENDARY" },
-  { id: "obsidian", name: "Obsidian",   tagline: "Edge of the singularity",    primary: "#0b1220", secondary: "#f5f5f5", glow: "#ffffff", price: 9000, rarity: "MYTHIC" },
+  { id: "default",  name: "Prism",      tagline: "Default refraction",          primary: "#22d3ee", secondary: "#ffffff", glow: "#22d3ee", price: 0,    rarity: "COMMON",    face: "😎" },
+  { id: "ember",    name: "Ember",      tagline: "Spicy little troublemaker",   primary: "#f97316", secondary: "#fde047", glow: "#ef4444", price: 350,  rarity: "COMMON",    face: "🥵" },
+  { id: "toxic",    name: "Toxic",      tagline: "Definitely not edible",       primary: "#84cc16", secondary: "#bef264", glow: "#22c55e", price: 600,  rarity: "RARE",      face: "🤢" },
+  { id: "abyss",    name: "Abyss",      tagline: "Saw things down there",       primary: "#0ea5e9", secondary: "#67e8f9", glow: "#1e3a8a", price: 900,  rarity: "RARE",      face: "🥶" },
+  { id: "rose",     name: "Rose Quartz",tagline: "Sends you mixed signals",     primary: "#ec4899", secondary: "#fbcfe8", glow: "#f43f5e", price: 1400, rarity: "EPIC",      face: "😘" },
+  { id: "void",     name: "Void",       tagline: "Has stared back too long",    primary: "#1f2937", secondary: "#a855f7", glow: "#a855f7", price: 2200, rarity: "EPIC",      face: "🤡" },
+  { id: "solar",    name: "Solar Flare",tagline: "Big main-character energy",   primary: "#facc15", secondary: "#ffffff", glow: "#f97316", price: 3500, rarity: "LEGENDARY", face: "🤩" },
+  { id: "aurora",   name: "Aurora",     tagline: "Vibing on another frequency", primary: "#a855f7", secondary: "#22d3ee", glow: "#ec4899", price: 5500, rarity: "LEGENDARY", face: "🥴" },
+  { id: "obsidian", name: "Obsidian",   tagline: "Plotting your demise",        primary: "#0b1220", secondary: "#f5f5f5", glow: "#ffffff", price: 9000, rarity: "MYTHIC",    face: "😈" },
 ];
 
 const RARITY_COLOR: Record<Skin["rarity"], string> = {
@@ -315,6 +316,11 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
         if (vehicle === "cube") {
           vy -= level.gravity * dt;
           py += vy * dt;
+          // No tap-delay: holding the button auto-jumps the moment cube touches ground
+          if (inputHeld && onGround) {
+            vy = level.jump;
+            onGround = false;
+          }
         } else if (vehicle === "ship") {
           const thrust = level.gravity * 0.9;
           vy += (inputHeld ? thrust : -thrust) * dt;
@@ -697,6 +703,16 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
         ctx.shadowBlur = 0;
         ctx.stroke();
       }
+
+      // Funny face overlay (keep upright by counter-rotating)
+      if (skin.face) {
+        ctx.rotate(-rotation);
+        ctx.shadowBlur = 0;
+        ctx.font = `${Math.floor(PLAYER_SIZE * 0.62)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(skin.face, 0, 2);
+      }
       ctx.restore();
 
       // wave trail
@@ -978,12 +994,16 @@ export default function GeometryGame() {
                   </div>
                   <div className="my-6 flex justify-center">
                     <div
-                      className="w-20 h-20 rotate-45 rounded-md"
+                      className="w-20 h-20 rotate-45 rounded-md flex items-center justify-center"
                       style={{
                         background: `radial-gradient(circle at 30% 30%, ${s.secondary}, ${s.primary} 55%, #0b1220)`,
                         boxShadow: `0 0 30px ${s.glow}`,
                       }}
-                    />
+                    >
+                      <span className="-rotate-45 text-4xl select-none" style={{ filter: `drop-shadow(0 2px 4px ${s.glow})` }}>
+                        {s.face}
+                      </span>
+                    </div>
                   </div>
                   <h3 className="text-xl font-black tracking-widest">{s.name.toUpperCase()}</h3>
                   <p className="text-xs text-white/60 tracking-wider mt-1">{s.tagline}</p>
