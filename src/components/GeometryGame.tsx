@@ -160,6 +160,9 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
     let running = true;
     let inputHeld = false;
     let prevHeld = false;
+    // Trail: recent player positions in screen space
+    const trail: { x: number; y: number; v: Vehicle; held: boolean }[] = [];
+    const TRAIL_MAX = 28;
 
     
 
@@ -174,6 +177,7 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       setCurrentVehicle(level.startingVehicle);
       consumedPortals.clear();
       py = hasCeil() ? 60 : 0;
+      trail.length = 0;
       stateRef.current = "playing";
       setProgress(0);
       force((n) => n + 1);
@@ -590,6 +594,66 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
 
       // player
       const cy = groundY - py - PLAYER_SIZE / 2;
+
+      // ----- TRAIL -----
+      if (stateRef.current === "playing") {
+        trail.push({ x: PLAYER_X + PLAYER_SIZE / 2, y: cy, v: vehicle, held: inputHeld });
+        if (trail.length > TRAIL_MAX) trail.shift();
+      }
+      if (trail.length > 1) {
+        ctx.save();
+        for (let i = 0; i < trail.length - 1; i++) {
+          const p = trail[i];
+          const t = i / trail.length; // 0 oldest -> 1 newest
+          const alpha = t * 0.55;
+          const size = PLAYER_SIZE * (0.35 + t * 0.55);
+          ctx.globalAlpha = alpha;
+          if (p.v === "wave") {
+            // sharp diamond shards along the path
+            ctx.fillStyle = skin.glow;
+            ctx.shadowColor = skin.glow;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y - size * 0.18);
+            ctx.lineTo(p.x + size * 0.18, p.y);
+            ctx.lineTo(p.x, p.y + size * 0.18);
+            ctx.lineTo(p.x - size * 0.18, p.y);
+            ctx.closePath();
+            ctx.fill();
+          } else if (p.v === "ship" || p.v === "ufo") {
+            // flame puffs
+            const grd = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, size * 0.5);
+            grd.addColorStop(0, skin.secondary);
+            grd.addColorStop(0.5, skin.glow);
+            grd.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (p.v === "ball") {
+            // soft circle dots
+            ctx.fillStyle = skin.primary;
+            ctx.shadowColor = skin.glow;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, size * 0.22, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // cube: little rotated squares
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(t * 1.2);
+            ctx.fillStyle = skin.primary;
+            ctx.shadowColor = skin.glow;
+            ctx.shadowBlur = 10;
+            const r = size * 0.22;
+            ctx.fillRect(-r, -r, r * 2, r * 2);
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+      }
+
       ctx.save();
       ctx.translate(PLAYER_X + PLAYER_SIZE / 2, cy);
       ctx.rotate(rotation);
