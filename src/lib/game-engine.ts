@@ -199,10 +199,10 @@ function genSegment(
 ) {
   let x = startX;
   const f = FLAVORS[idx] ?? FLAVORS[FLAVORS.length - 1];
-  const baseMinGap = Math.max(200, 420 - idx * 12);
-  const baseMaxGap = Math.max(baseMinGap + 100, 700 - idx * 16);
-  const minGap = baseMinGap * f.gapMul;
-  const maxGap = baseMaxGap * f.gapMul;
+  const baseMinGap = Math.max(260, 480 - idx * 12);
+  const baseMaxGap = Math.max(baseMinGap + 120, 820 - idx * 16);
+  const minGap = baseMinGap * f.gapMul * 1.25;
+  const maxGap = baseMaxGap * f.gapMul * 1.25;
   let altFlip = false; // for zigzag
   while (x < endX) {
     const gap = minGap + rand() * (maxGap - minGap);
@@ -319,7 +319,7 @@ export function buildLevel(idx: number): Level {
   const gravity = 2400 + idx * 70;
   const jump = 780 + idx * 14;
 
-  const durationSec = 90;
+  const durationSec = 100;
   const length = speed * durationSec;
   const startingVehicle = VEHICLES[idx] ?? "cube";
 
