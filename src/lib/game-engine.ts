@@ -327,7 +327,7 @@ const ALL_VEHICLES: Vehicle[] = ["cube", "ship", "ball", "ufo", "wave"];
 export function buildLevel(idx: number): Level {
   const rand = mulberry32(1337 + idx * 7919);
   const difficulty = idx / 29;
-  const speed = idx >= 27 ? 950 : idx === 26 ? 800 : 380 + idx * 16;
+  const speed = idx === 27 ? 720 : idx >= 27 ? 950 : idx === 26 ? 800 : 380 + idx * 16;
   const gravity = 2400 + idx * 70;
   const jump = 780 + idx * 14;
 
