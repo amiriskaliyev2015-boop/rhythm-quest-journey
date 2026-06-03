@@ -172,9 +172,11 @@ const mergeGameSaves = (local: GameSave, cloud: GameSave | null): GameSave => {
 interface Props {
   level: Level;
   bestAttempts: number | null;
+  bestPercent: number;
   skin: Skin;
   onExit: () => void;
   onWin: (info: { attempts: number; reward: number; isNewRecord: boolean }) => void;
+  onDeath: (info: { percent: number; reward: number; isNewRecord: boolean }) => void;
 }
 
 const BASE_REWARD = 50;
