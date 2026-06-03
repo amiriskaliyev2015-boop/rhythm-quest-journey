@@ -236,13 +236,16 @@ const VEHICLE_LABELS: Record<Vehicle, string> = {
   wave: "BOLT",
 };
 
-function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
+function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }: Props) {
   const [winInfo, setWinInfo] = useState<{ reward: number; isNewRecord: boolean } | null>(null);
+  const [deathInfo, setDeathInfo] = useState<{ percent: number; reward: number; isNewRecord: boolean } | null>(null);
+  const bestPercentRef = useRef(bestPercent);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState>("playing");
   const [, force] = useState(0);
   const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
   const [attempts, setAttempts] = useState(1);
   const attemptsRef = useRef(1);
   const bumpAttempts = useCallback(() => {
