@@ -1113,7 +1113,7 @@ export default function GeometryGame() {
               SKIN VAULT
             </h2>
             <div className="px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
-              <span className="text-cyan-300">◆</span> {prisms}
+              <span className="text-cyan-300">◆</span> {save.prisms}
             </div>
           </div>
           {shopMsg && (
@@ -1124,8 +1124,8 @@ export default function GeometryGame() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {SKINS.map((s) => {
               const owned = ownedSkins.has(s.id);
-              const equipped = equippedSkinId === s.id;
-              const canAfford = prisms >= s.price;
+              const equipped = save.equippedSkinId === s.id;
+              const canAfford = save.prisms >= s.price;
               return (
                 <div
                   key={s.id}
@@ -1245,7 +1245,7 @@ export default function GeometryGame() {
           </div>
 
           <p className="mt-8 text-white/40 text-xs tracking-widest">
-            ◆ {prisms.toLocaleString()} PRISMS · {ownedSkins.size}/{SKINS.length} SKINS
+            ◆ {save.prisms.toLocaleString()} PRISMS · {ownedSkins.size}/{SKINS.length} SKINS
           </p>
           <p className="mt-2 text-white/30 text-xs tracking-widest">
             GEM · ROCKET · STAR · RHOMB · BOLT
@@ -1261,7 +1261,7 @@ export default function GeometryGame() {
       <Game
         key={selected}
         level={level}
-        bestAttempts={bestAttempts[selected] ?? null}
+        bestAttempts={save.bestAttempts[selected] ?? null}
         skin={equippedSkin}
         onExit={goToMenu}
         onWin={(info) => handleWin(selected, info)}
@@ -1287,7 +1287,7 @@ export default function GeometryGame() {
             25 levels · 5 shapes · neon shape-runner
           </p>
           <div className="mt-4 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
-            <span className="text-cyan-300">◆</span> {prisms.toLocaleString()} PRISMS
+            <span className="text-cyan-300">◆</span> {save.prisms.toLocaleString()} PRISMS
             <button
               onClick={() => { setShopMsg(null); setScreen("shop"); }}
               className="ml-2 px-3 py-1 rounded-full bg-white text-black text-xs tracking-widest hover:scale-105 transition"
@@ -1343,9 +1343,9 @@ export default function GeometryGame() {
                     <span>SPEED {Math.round(lv.speed)}</span>
                     <span>{done ? "✓ DONE" : "~3:00"}</span>
                   </div>
-                  {bestAttempts[i] !== undefined && (
+                  {save.bestAttempts[i] !== undefined && (
                     <div className="mt-2 text-[10px] tracking-widest text-white/70">
-                      BEST · {bestAttempts[i]} {bestAttempts[i] === 1 ? "ATTEMPT" : "ATTEMPTS"}
+                      BEST · {save.bestAttempts[i]} {save.bestAttempts[i] === 1 ? "ATTEMPT" : "ATTEMPTS"}
                     </div>
                   )}
 
