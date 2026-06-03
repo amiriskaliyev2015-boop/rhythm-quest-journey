@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      game_saves: {
+        Row: {
+          best_attempts: Json
+          completed: number[]
+          created_at: string
+          equipped_skin_id: string
+          id: string
+          owned_skins: string[]
+          prisms: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_attempts?: Json
+          completed?: number[]
+          created_at?: string
+          equipped_skin_id?: string
+          id?: string
+          owned_skins?: string[]
+          prisms?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_attempts?: Json
+          completed?: number[]
+          created_at?: string
+          equipped_skin_id?: string
+          id?: string
+          owned_skins?: string[]
+          prisms?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
 import { LevelMusic } from "@/lib/game-music";
+import { supabase } from "@/integrations/supabase/client";
+import { getGameSave, saveGameSave } from "@/lib/game-save.functions";
 
 const GROUND_H = 80;
 const PLAYER_SIZE = 40;
@@ -135,6 +138,23 @@ const writeGameSave = (save: GameSave) => {
     );
     window.localStorage.setItem("gd-equipped", normalized.equippedSkinId);
   } catch {}
+};
+
+const mergeGameSaves = (local: GameSave, cloud: GameSave | null): GameSave => {
+  if (!cloud) return normalizeSave(local);
+  const bestAttempts = { ...cloud.bestAttempts };
+  for (const [level, attempts] of Object.entries(local.bestAttempts)) {
+    const cloudAttempts = bestAttempts[Number(level)];
+    bestAttempts[Number(level)] = cloudAttempts ? Math.min(cloudAttempts, attempts) : attempts;
+  }
+  const ownedSkins = Array.from(new Set([...cloud.ownedSkins, ...local.ownedSkins]));
+  return normalizeSave({
+    completed: Array.from(new Set([...cloud.completed, ...local.completed])),
+    bestAttempts,
+    prisms: Math.max(local.prisms, cloud.prisms),
+    ownedSkins,
+    equippedSkinId: ownedSkins.includes(local.equippedSkinId) ? local.equippedSkinId : cloud.equippedSkinId,
+  });
 };
 
 interface Props {
@@ -1029,10 +1049,62 @@ export default function GeometryGame() {
   const [selected, setSelected] = useState<number | null>(null);
   const [save, setSave] = useState<GameSave>(() => readGameSave());
   const [shopMsg, setShopMsg] = useState<string | null>(null);
+  const loadCloudSave = useServerFn(getGameSave);
+  const saveCloudSave = useServerFn(saveGameSave);
+  const signedInRef = useRef(false);
+  const cloudReadyRef = useRef(false);
 
   useEffect(() => {
     setSave(readGameSave());
   }, []);
+
+  const commitSave = useCallback(
+    (nextSave: GameSave) => {
+      const normalized = normalizeSave(nextSave);
+      writeGameSave(normalized);
+      if (signedInRef.current && cloudReadyRef.current) {
+        void saveCloudSave({ data: normalized }).catch(() => {});
+      }
+      return normalized;
+    },
+    [saveCloudSave],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncCloud = async () => {
+      const { data } = await supabase.auth.getSession();
+      signedInRef.current = !!data.session;
+      if (!data.session) {
+        cloudReadyRef.current = false;
+        return;
+      }
+
+      cloudReadyRef.current = false;
+      try {
+        const cloud = await loadCloudSave();
+        if (cancelled) return;
+        const merged = mergeGameSaves(readGameSave(), cloud ? normalizeSave(cloud) : null);
+        writeGameSave(merged);
+        setSave(merged);
+        await saveCloudSave({ data: merged });
+        cloudReadyRef.current = true;
+      } catch {
+        cloudReadyRef.current = true;
+      }
+    };
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
+      void syncCloud();
+    });
+    void syncCloud();
+
+    return () => {
+      cancelled = true;
+      subscription.subscription.unsubscribe();
+    };
+  }, [loadCloudSave, saveCloudSave]);
 
   const completed = new Set(save.completed);
   const ownedSkins = new Set(save.ownedSkins);
@@ -1043,9 +1115,7 @@ export default function GeometryGame() {
     if (!skin) return;
     if (ownedSkins.has(id)) {
       setSave((prev) => {
-        const next = normalizeSave({ ...prev, equippedSkinId: id });
-        writeGameSave(next);
-        return next;
+        return commitSave({ ...prev, equippedSkinId: id });
       });
       setShopMsg(`EQUIPPED · ${skin.name.toUpperCase()}`);
       return;
@@ -1055,14 +1125,12 @@ export default function GeometryGame() {
       return;
     }
     setSave((prev) => {
-      const next = normalizeSave({
+      return commitSave({
         ...prev,
         prisms: prev.prisms - skin.price,
         ownedSkins: [...prev.ownedSkins, id],
         equippedSkinId: id,
       });
-      writeGameSave(next);
-      return next;
     });
     setShopMsg(`UNLOCKED · ${skin.name.toUpperCase()}`);
   };
@@ -1072,17 +1140,15 @@ export default function GeometryGame() {
       setSave((prev) => {
         const nextCompleted = new Set(prev.completed);
         nextCompleted.add(i);
-        const next = normalizeSave({
+        return commitSave({
           ...prev,
           completed: [...nextCompleted],
           bestAttempts: info.isNewRecord ? { ...prev.bestAttempts, [i]: info.attempts } : prev.bestAttempts,
           prisms: prev.prisms + info.reward,
         });
-        writeGameSave(next);
-        return next;
       });
     },
-    [],
+    [commitSave],
   );
 
   const selectLevel = (i: number) => {
