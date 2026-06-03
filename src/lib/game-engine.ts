@@ -93,6 +93,9 @@ const NAMES = [
   "Absolute Zero",
   "Spike Hell",
   "Arrow Apocalypse",
+  "Graviton Collapse",
+  "Star Eater",
+  "Final Judgment",
 ];
 
 const VEHICLES: Vehicle[] = [
@@ -122,6 +125,9 @@ const VEHICLES: Vehicle[] = [
   "ball",
   "wave",
   "cube",
+  "wave",
+  "ball",
+  "ship",
   "wave",
 ];
 
@@ -175,6 +181,12 @@ const FLAVORS: Flavor[] = [
   { gapMul: 0.7, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true }, // 25 spikes only
   // === Level 27 — ARROW APOCALYPSE: wave only, all spikes, hyper mega hard ===
   { gapMul: 0.5, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true, laserGate: true }, // 26
+  // === Level 28 — GRAVITON COLLAPSE: ball only, zigzag hell ===
+  { gapMul: 0.4, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true, zigzag: true, laserGate: true }, // 27
+  // === Level 29 — STAR EATER: ship only, saw corridor nightmare ===
+  { gapMul: 0.35, spikeBias: 0.3, blockBias: 0, sawBias: 0.7, rapid: true, corridor: true, sawField: true, laserGate: true }, // 28
+  // === Level 30 — FINAL JUDGMENT: wave only, absolute hell ===
+  { gapMul: 0.3, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true, laserGate: true }, // 29
 ];
 
 
@@ -314,8 +326,8 @@ const ALL_VEHICLES: Vehicle[] = ["cube", "ship", "ball", "ufo", "wave"];
 
 export function buildLevel(idx: number): Level {
   const rand = mulberry32(1337 + idx * 7919);
-  const difficulty = idx / 26;
-  const speed = idx === 26 ? 800 : 380 + idx * 16;
+  const difficulty = idx / 29;
+  const speed = idx >= 27 ? 950 : idx === 26 ? 800 : 380 + idx * 16;
   const gravity = 2400 + idx * 70;
   const jump = 780 + idx * 14;
 
@@ -327,7 +339,10 @@ export function buildLevel(idx: number): Level {
   // Portals start appearing from level 2 (idx>=1) and get more frequent with idx.
   // Level 26 (idx 25) — "Spike Hell" — locked to cube, no portals, spikes only.
   // Level 27 (idx 26) — "Arrow Apocalypse" — locked to wave, no portals, spikes only.
-  const portalCount = idx === 25 || idx === 26 ? 0 : idx < 1 ? 0 : Math.min(8, 2 + Math.floor(idx / 2));
+  // Level 28 (idx 27) — "Graviton Collapse" — locked to ball, no portals, spikes only.
+  // Level 29 (idx 28) — "Star Eater" — locked to ship, no portals.
+  // Level 30 (idx 29) — "Final Judgment" — locked to wave, no portals.
+  const portalCount = idx >= 25 ? 0 : idx < 1 ? 0 : Math.min(8, 2 + Math.floor(idx / 2));
   const switchPoints: number[] = [];
   for (let i = 1; i <= portalCount; i++) {
     switchPoints.push((length * i) / (portalCount + 1));
@@ -378,4 +393,4 @@ export function buildLevel(idx: number): Level {
   };
 }
 
-export const LEVELS: Level[] = Array.from({ length: 27 }, (_, i) => buildLevel(i));
+export const LEVELS: Level[] = Array.from({ length: 30 }, (_, i) => buildLevel(i));
