@@ -172,9 +172,11 @@ const mergeGameSaves = (local: GameSave, cloud: GameSave | null): GameSave => {
 interface Props {
   level: Level;
   bestAttempts: number | null;
+  bestPercent: number;
   skin: Skin;
   onExit: () => void;
   onWin: (info: { attempts: number; reward: number; isNewRecord: boolean }) => void;
+  onDeath: (info: { percent: number; reward: number; isNewRecord: boolean }) => void;
 }
 
 const BASE_REWARD = 50;
@@ -188,6 +190,43 @@ const computeReward = (levelIndex: number, attempts: number, prevBest: number | 
   return { reward: base + bonus + starterBonus, isNewRecord };
 };
 
+// Reward prisms for beating your % progress record on a level (paid on death).
+const computePercentReward = (levelIndex: number, percent: number, prevBest: number) => {
+  const isNewRecord = percent > prevBest;
+  if (!isNewRecord) return { reward: 0, isNewRecord: false, delta: 0 };
+  const delta = percent - prevBest;
+  const reward = Math.max(10, delta * 10) * (1 + Math.floor(levelIndex / 5));
+  return { reward, isNewRecord: true, delta };
+};
+
+const BEST_PCT_KEY = "prism-rush-best-percent-v1";
+const readBestPercents = (): Record<number, number> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(BEST_PCT_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<number, number> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      const lvl = Number(k);
+      const pct = Number(v);
+      if (Number.isInteger(lvl) && Number.isFinite(pct) && pct >= 0 && pct <= 100) {
+        out[lvl] = Math.floor(pct);
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+};
+const writeBestPercents = (m: Record<number, number>) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(BEST_PCT_KEY, JSON.stringify(m));
+  } catch {}
+};
+
 
 const VEHICLE_LABELS: Record<Vehicle, string> = {
   cube: "GEM",
@@ -197,13 +236,16 @@ const VEHICLE_LABELS: Record<Vehicle, string> = {
   wave: "BOLT",
 };
 
-function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
+function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }: Props) {
   const [winInfo, setWinInfo] = useState<{ reward: number; isNewRecord: boolean } | null>(null);
+  const [deathInfo, setDeathInfo] = useState<{ percent: number; reward: number; isNewRecord: boolean } | null>(null);
+  const bestPercentRef = useRef(bestPercent);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState>("playing");
   const [, force] = useState(0);
   const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
   const [attempts, setAttempts] = useState(1);
   const attemptsRef = useRef(1);
   const bumpAttempts = useCallback(() => {
@@ -309,12 +351,20 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       trail.length = 0;
       stateRef.current = "playing";
       setProgress(0);
+      progressRef.current = 0;
+      setDeathInfo(null);
       force((n) => n + 1);
     };
 
     const die = () => {
       if (stateRef.current !== "playing") return;
       stateRef.current = "dead";
+      const pct = Math.floor(progressRef.current * 100);
+      const info = computePercentReward(level.index, pct, bestPercentRef.current);
+      const payload = { percent: pct, reward: info.reward, isNewRecord: info.isNewRecord };
+      setDeathInfo(payload);
+      if (info.isNewRecord) bestPercentRef.current = pct;
+      onDeath(payload);
       force((n) => n + 1);
     };
 
@@ -327,6 +377,7 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
       force((n) => n + 1);
       onWin({ attempts: a, reward, isNewRecord });
     };
+
 
 
     const handlePress = () => {
@@ -550,6 +601,7 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
         }
 
         const prog = Math.min(1, scrollX / level.length);
+        progressRef.current = prog;
         setProgress(prog);
         if (prog >= 1) win();
       }
@@ -1008,12 +1060,25 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
             <div className="text-6xl font-black text-red-500 tracking-widest drop-shadow-[0_0_30px_rgba(239,68,68,0.8)]">
               CRASHED
             </div>
-            <div className="mt-2 text-white/80 text-sm tracking-widest">
+            {deathInfo && (
+              <div className="mt-3 space-y-1">
+                <div className="text-white text-lg font-bold tracking-widest">
+                  {deathInfo.percent}% · BEST {Math.max(bestPercent, deathInfo.percent)}%
+                </div>
+                {deathInfo.isNewRecord && deathInfo.reward > 0 && (
+                  <div className="text-yellow-300 text-sm font-black tracking-[0.25em] animate-pulse">
+                    ★ NEW RECORD · +{deathInfo.reward} ◆
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="mt-3 text-white/80 text-sm tracking-widest">
               TAP / SPACE TO RETRY
             </div>
           </div>
         </div>
       )}
+
 
       {state === "won" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -1059,7 +1124,8 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
 export default function GeometryGame() {
   const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
-  const [save, setSave] = useState<GameSave>(() => readGameSave());
+  const [save, setSave] = useState<GameSave>(defaultSave);
+  const [bestPercents, setBestPercents] = useState<Record<number, number>>({});
   const [shopMsg, setShopMsg] = useState<string | null>(null);
   const loadCloudSave = useServerFn(getGameSave);
   const saveCloudSave = useServerFn(saveGameSave);
@@ -1068,6 +1134,7 @@ export default function GeometryGame() {
 
   useEffect(() => {
     setSave(readGameSave());
+    setBestPercents(readBestPercents());
   }, []);
 
   const commitSave = useCallback(
@@ -1169,6 +1236,19 @@ export default function GeometryGame() {
           prisms: prev.prisms + info.reward,
         });
       });
+    },
+    [commitSave],
+  );
+
+  const handleDeath = useCallback(
+    (i: number, info: { percent: number; reward: number; isNewRecord: boolean }) => {
+      if (!info.isNewRecord || info.reward <= 0) return;
+      setBestPercents((prev) => {
+        const next = { ...prev, [i]: info.percent };
+        writeBestPercents(next);
+        return next;
+      });
+      setSave((prev) => commitSave({ ...prev, prisms: prev.prisms + info.reward }));
     },
     [commitSave],
   );
@@ -1350,10 +1430,13 @@ export default function GeometryGame() {
         key={selected}
         level={level}
         bestAttempts={save.bestAttempts[selected] ?? null}
+        bestPercent={bestPercents[selected] ?? 0}
         skin={equippedSkin}
         onExit={goToMenu}
         onWin={(info) => handleWin(selected, info)}
+        onDeath={(info) => handleDeath(selected, info)}
       />
+
     );
   }
 
