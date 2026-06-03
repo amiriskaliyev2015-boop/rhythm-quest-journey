@@ -16,30 +16,38 @@
   --color-border: var(--border);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --font-display: "Orbitron", system-ui, sans-serif;
+  --color-trading-up: var(--trading-up);
+  --color-trading-down: var(--trading-down);
+  --font-display: "BinanceNova", "Inter", system-ui, sans-serif;
+  --font-mono: "BinancePlex", "JetBrains Mono", ui-monospace, monospace;
 }
 
 :root {
-  --background: oklch(0.14 0.04 280);
-  --foreground: oklch(0.98 0.01 280);
-  --card: oklch(0.18 0.05 280);
-  --card-foreground: oklch(0.98 0.01 280);
-  --primary: oklch(0.72 0.22 340);
-  --primary-foreground: oklch(0.1 0.02 280);
-  --accent: oklch(0.78 0.2 195);
-  --accent-foreground: oklch(0.1 0.02 280);
-  --muted: oklch(0.25 0.04 280);
-  --muted-foreground: oklch(0.7 0.03 280);
-  --border: oklch(0.3 0.05 280);
+  /* Binance-inspired palette */
+  --background: oklch(0.16 0.01 250);          /* #0b0e11 canvas-dark */
+  --foreground: oklch(0.95 0.005 250);         /* #eaecef body */
+  --card: oklch(0.22 0.012 250);               /* #1e2329 surface-card-dark */
+  --card-foreground: oklch(0.95 0.005 250);
+  --primary: oklch(0.86 0.17 95);              /* #fcd535 Binance yellow */
+  --primary-foreground: oklch(0.2 0.012 250);  /* #181a20 ink */
+  --accent: oklch(0.78 0.12 195);              /* turquoise #2dbdb6 */
+  --accent-foreground: oklch(0.2 0.012 250);
+  --muted: oklch(0.28 0.014 250);              /* #2b3139 surface-elevated */
+  --muted-foreground: oklch(0.62 0.018 250);   /* #707a8a muted */
+  --border: oklch(0.32 0.014 250);             /* #2b3139 hairline-on-dark */
+  --trading-up: oklch(0.72 0.18 155);          /* #0ecb81 */
+  --trading-down: oklch(0.66 0.22 18);         /* #f6465d */
 }
 
 @layer base {
   * { border-color: var(--color-border); }
   body {
-    background: radial-gradient(ellipse at top, oklch(0.2 0.08 290), var(--color-background));
+    background: radial-gradient(ellipse at top, oklch(0.22 0.02 90 / 0.18), var(--color-background));
     color: var(--color-foreground);
-    font-family: "Orbitron", system-ui, sans-serif;
+    font-family: "BinanceNova", "Inter", system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
     min-height: 100vh;
     overflow-x: hidden;
+    letter-spacing: -0.01em;
   }
 }
