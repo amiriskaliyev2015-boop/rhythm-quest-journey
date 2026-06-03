@@ -351,12 +351,20 @@ function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }
       trail.length = 0;
       stateRef.current = "playing";
       setProgress(0);
+      progressRef.current = 0;
+      setDeathInfo(null);
       force((n) => n + 1);
     };
 
     const die = () => {
       if (stateRef.current !== "playing") return;
       stateRef.current = "dead";
+      const pct = Math.floor(progressRef.current * 100);
+      const info = computePercentReward(level.index, pct, bestPercentRef.current);
+      const payload = { percent: pct, reward: info.reward, isNewRecord: info.isNewRecord };
+      setDeathInfo(payload);
+      if (info.isNewRecord) bestPercentRef.current = pct;
+      onDeath(payload);
       force((n) => n + 1);
     };
 
@@ -369,6 +377,7 @@ function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }
       force((n) => n + 1);
       onWin({ attempts: a, reward, isNewRecord });
     };
+
 
 
     const handlePress = () => {
