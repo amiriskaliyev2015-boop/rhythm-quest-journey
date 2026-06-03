@@ -1,0 +1,1 @@
+UPDATE public.game_saves SET prisms = prisms + 150000, updated_at = now() WHERE user_id = '5c324d5d-268a-48b1-b25b-3c87ff750571';
