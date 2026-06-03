@@ -1372,7 +1372,7 @@ export default function GeometryGame() {
             PRISM RUSH
           </h1>
           <p className="mt-3 text-muted-foreground tracking-widest text-sm uppercase">
-            25 levels · 5 shapes · neon shape-runner
+            30 levels · 5 shapes · neon shape-runner
           </p>
           <div className="mt-4 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
             <span className="text-cyan-300">◆</span> {save.prisms.toLocaleString()} PRISMS
