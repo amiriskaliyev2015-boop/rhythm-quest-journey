@@ -19,20 +19,30 @@ export interface Skin {
   secondary: string; // highlight
   glow: string;      // outer glow / shadow
   price: number;
-  rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "MYTHIC";
+  rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "MYTHIC" | "EXOTIC" | "EXCLUSIVE";
   face: string;      // funny face emoji
 }
 
 export const SKINS: Skin[] = [
-  { id: "default",  name: "Prism",      tagline: "Default refraction",          primary: "#22d3ee", secondary: "#ffffff", glow: "#22d3ee", price: 0,    rarity: "COMMON",    face: "😎" },
-  { id: "ember",    name: "Ember",      tagline: "Spicy little troublemaker",   primary: "#f97316", secondary: "#fde047", glow: "#ef4444", price: 350,  rarity: "COMMON",    face: "🥵" },
-  { id: "toxic",    name: "Toxic",      tagline: "Definitely not edible",       primary: "#84cc16", secondary: "#bef264", glow: "#22c55e", price: 600,  rarity: "RARE",      face: "🤢" },
-  { id: "abyss",    name: "Abyss",      tagline: "Saw things down there",       primary: "#0ea5e9", secondary: "#67e8f9", glow: "#1e3a8a", price: 900,  rarity: "RARE",      face: "🥶" },
-  { id: "rose",     name: "Rose Quartz",tagline: "Sends you mixed signals",     primary: "#ec4899", secondary: "#fbcfe8", glow: "#f43f5e", price: 1400, rarity: "EPIC",      face: "😘" },
-  { id: "void",     name: "Void",       tagline: "Has stared back too long",    primary: "#1f2937", secondary: "#a855f7", glow: "#a855f7", price: 2200, rarity: "EPIC",      face: "🤡" },
-  { id: "solar",    name: "Solar Flare",tagline: "Big main-character energy",   primary: "#facc15", secondary: "#ffffff", glow: "#f97316", price: 3500, rarity: "LEGENDARY", face: "🤩" },
-  { id: "aurora",   name: "Aurora",     tagline: "Vibing on another frequency", primary: "#a855f7", secondary: "#22d3ee", glow: "#ec4899", price: 5500, rarity: "LEGENDARY", face: "🥴" },
-  { id: "obsidian", name: "Obsidian",   tagline: "Plotting your demise",        primary: "#0b1220", secondary: "#f5f5f5", glow: "#ffffff", price: 9000, rarity: "MYTHIC",    face: "😈" },
+  { id: "default",  name: "Prism",       tagline: "Default refraction",            primary: "#22d3ee", secondary: "#ffffff", glow: "#22d3ee", price: 0,     rarity: "COMMON",    face: "😎" },
+  { id: "ember",    name: "Ember",       tagline: "Spicy little troublemaker",     primary: "#f97316", secondary: "#fde047", glow: "#ef4444", price: 350,   rarity: "COMMON",    face: "🥵" },
+  { id: "toxic",    name: "Toxic",       tagline: "Definitely not edible",         primary: "#84cc16", secondary: "#bef264", glow: "#22c55e", price: 600,   rarity: "RARE",      face: "🤢" },
+  { id: "abyss",    name: "Abyss",       tagline: "Saw things down there",         primary: "#0ea5e9", secondary: "#67e8f9", glow: "#1e3a8a", price: 900,   rarity: "RARE",      face: "🥶" },
+  { id: "rose",     name: "Rose Quartz", tagline: "Sends you mixed signals",       primary: "#ec4899", secondary: "#fbcfe8", glow: "#f43f5e", price: 1400,  rarity: "EPIC",      face: "😘" },
+  { id: "void",     name: "Void",        tagline: "Has stared back too long",      primary: "#1f2937", secondary: "#a855f7", glow: "#a855f7", price: 2200,  rarity: "EPIC",      face: "🤡" },
+  { id: "solar",    name: "Solar Flare", tagline: "Big main-character energy",     primary: "#facc15", secondary: "#ffffff", glow: "#f97316", price: 3500,  rarity: "LEGENDARY", face: "🤩" },
+  { id: "aurora",   name: "Aurora",      tagline: "Vibing on another frequency",   primary: "#a855f7", secondary: "#22d3ee", glow: "#ec4899", price: 5500,  rarity: "LEGENDARY", face: "🥴" },
+  { id: "obsidian", name: "Obsidian",    tagline: "Plotting your demise",          primary: "#0b1220", secondary: "#f5f5f5", glow: "#ffffff", price: 9000,  rarity: "MYTHIC",    face: "😈" },
+  // ─── EXOTIC ───
+  { id: "plasma",   name: "Plasma Core", tagline: "Burns through the fabric",      primary: "#f0abfc", secondary: "#fef3c7", glow: "#d946ef", price: 14000, rarity: "EXOTIC",    face: "🥳" },
+  { id: "nebula",   name: "Nebula",      tagline: "Born inside a dying star",      primary: "#312e81", secondary: "#f0abfc", glow: "#6366f1", price: 18000, rarity: "EXOTIC",    face: "🤯" },
+  { id: "venom",    name: "Venom",       tagline: "Liquid radiation, do not lick", primary: "#022c22", secondary: "#a3e635", glow: "#10b981", price: 22000, rarity: "EXOTIC",    face: "👽" },
+  { id: "hologram", name: "Hologram",    tagline: "Glitch in the simulation",      primary: "#f5d0fe", secondary: "#67e8f9", glow: "#a78bfa", price: 28000, rarity: "EXOTIC",    face: "🫨" },
+  // ─── EXCLUSIVE ───
+  { id: "dragon",   name: "Dragon Scale",tagline: "Stolen from the last wyrm",     primary: "#7f1d1d", secondary: "#fbbf24", glow: "#dc2626", price: 40000, rarity: "EXCLUSIVE", face: "🐲" },
+  { id: "celestia", name: "Celestia",    tagline: "Forged in a supernova",         primary: "#fef3c7", secondary: "#fde68a", glow: "#fbbf24", price: 60000, rarity: "EXCLUSIVE", face: "👑" },
+  { id: "blackhole",name: "Black Hole",  tagline: "Even light gave up",            primary: "#000000", secondary: "#a855f7", glow: "#7c3aed", price: 85000, rarity: "EXCLUSIVE", face: "🕳️" },
+  { id: "godmode",  name: "GOD MODE",    tagline: "You shouldn't be here",         primary: "#fef9c3", secondary: "#ffffff", glow: "#fde047", price: 150000,rarity: "EXCLUSIVE", face: "🗿" },
 ];
 
 const RARITY_COLOR: Record<Skin["rarity"], string> = {
@@ -41,6 +51,8 @@ const RARITY_COLOR: Record<Skin["rarity"], string> = {
   EPIC: "#a855f7",
   LEGENDARY: "#facc15",
   MYTHIC: "#f43f5e",
+  EXOTIC: "#f0abfc",
+  EXCLUSIVE: "#fde047",
 };
 
 const SAVE_KEY = "prism-rush-save-v2";
