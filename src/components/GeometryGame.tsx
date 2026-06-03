@@ -1027,82 +1027,58 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
 export default function GeometryGame() {
   const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
-  // SSR-safe defaults — hydrate from localStorage in an effect to avoid mismatch.
-  const [completed, setCompleted] = useState<Set<number>>(new Set());
-  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>({});
-  const [prisms, setPrisms] = useState<number>(0);
-  const [ownedSkins, setOwnedSkins] = useState<Set<string>>(new Set(["default"]));
-  const [equippedSkinId, setEquippedSkinId] = useState<string>("default");
+  const [save, setSave] = useState<GameSave>(() => readGameSave());
   const [shopMsg, setShopMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const c = localStorage.getItem("gd-completed");
-      if (c) setCompleted(new Set(JSON.parse(c) as number[]));
-      const b = localStorage.getItem("gd-best");
-      if (b) setBestAttempts(JSON.parse(b) as Record<number, number>);
-      const p = localStorage.getItem("gd-prisms");
-      if (p) setPrisms(Number(p) || 0);
-      const o = localStorage.getItem("gd-skins");
-      if (o) setOwnedSkins(new Set(["default", ...(JSON.parse(o) as string[])]));
-      const e = localStorage.getItem("gd-equipped");
-      if (e) setEquippedSkinId(e);
-    } catch {}
+    setSave(readGameSave());
   }, []);
 
-  const equippedSkin = SKINS.find((s) => s.id === equippedSkinId) ?? SKINS[0];
+  const completed = new Set(save.completed);
+  const ownedSkins = new Set(save.ownedSkins);
+  const equippedSkin = SKINS.find((s) => s.id === save.equippedSkinId) ?? SKINS[0];
 
   const buySkin = (id: string) => {
     const skin = SKINS.find((s) => s.id === id);
     if (!skin) return;
     if (ownedSkins.has(id)) {
-      setEquippedSkinId(id);
-      try { localStorage.setItem("gd-equipped", id); } catch {}
+      setSave((prev) => {
+        const next = normalizeSave({ ...prev, equippedSkinId: id });
+        writeGameSave(next);
+        return next;
+      });
       setShopMsg(`EQUIPPED · ${skin.name.toUpperCase()}`);
       return;
     }
-    if (prisms < skin.price) {
-      setShopMsg(`NEED ${skin.price - prisms} MORE ◆`);
+    if (save.prisms < skin.price) {
+      setShopMsg(`NEED ${skin.price - save.prisms} MORE ◆`);
       return;
     }
-    const nextPrisms = prisms - skin.price;
-    const nextOwned = new Set(ownedSkins);
-    nextOwned.add(id);
-    setPrisms(nextPrisms);
-    setOwnedSkins(nextOwned);
-    setEquippedSkinId(id);
-    try {
-      localStorage.setItem("gd-prisms", String(nextPrisms));
-      localStorage.setItem("gd-skins", JSON.stringify([...nextOwned].filter((x) => x !== "default")));
-      localStorage.setItem("gd-equipped", id);
-    } catch {}
+    setSave((prev) => {
+      const next = normalizeSave({
+        ...prev,
+        prisms: prev.prisms - skin.price,
+        ownedSkins: [...prev.ownedSkins, id],
+        equippedSkinId: id,
+      });
+      writeGameSave(next);
+      return next;
+    });
     setShopMsg(`UNLOCKED · ${skin.name.toUpperCase()}`);
   };
 
   const handleWin = useCallback(
     (i: number, info: { attempts: number; reward: number; isNewRecord: boolean }) => {
-      setCompleted((prev) => {
-        const next = new Set(prev);
-        next.add(i);
-        try {
-          localStorage.setItem("gd-completed", JSON.stringify([...next]));
-        } catch {}
-        return next;
-      });
-      if (info.isNewRecord) {
-        setBestAttempts((prev) => {
-          const next = { ...prev, [i]: info.attempts };
-          try {
-            localStorage.setItem("gd-best", JSON.stringify(next));
-          } catch {}
-          return next;
+      setSave((prev) => {
+        const nextCompleted = new Set(prev.completed);
+        nextCompleted.add(i);
+        const next = normalizeSave({
+          ...prev,
+          completed: [...nextCompleted],
+          bestAttempts: info.isNewRecord ? { ...prev.bestAttempts, [i]: info.attempts } : prev.bestAttempts,
+          prisms: prev.prisms + info.reward,
         });
-      }
-      setPrisms((p) => {
-        const next = p + info.reward;
-        try {
-          localStorage.setItem("gd-prisms", String(next));
-        } catch {}
+        writeGameSave(next);
         return next;
       });
     },
