@@ -1124,7 +1124,8 @@ function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }
 export default function GeometryGame() {
   const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
-  const [save, setSave] = useState<GameSave>(() => readGameSave());
+  const [save, setSave] = useState<GameSave>(defaultSave);
+  const [bestPercents, setBestPercents] = useState<Record<number, number>>({});
   const [shopMsg, setShopMsg] = useState<string | null>(null);
   const loadCloudSave = useServerFn(getGameSave);
   const saveCloudSave = useServerFn(saveGameSave);
