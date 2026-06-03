@@ -181,6 +181,12 @@ const FLAVORS: Flavor[] = [
   { gapMul: 0.7, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true }, // 25 spikes only
   // === Level 27 — ARROW APOCALYPSE: wave only, all spikes, hyper mega hard ===
   { gapMul: 0.5, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true, laserGate: true }, // 26
+  // === Level 28 — GRAVITON COLLAPSE: ball only, zigzag hell ===
+  { gapMul: 0.4, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true, zigzag: true, laserGate: true }, // 27
+  // === Level 29 — STAR EATER: ship only, saw corridor nightmare ===
+  { gapMul: 0.35, spikeBias: 0.3, blockBias: 0, sawBias: 0.7, rapid: true, corridor: true, sawField: true, laserGate: true }, // 28
+  // === Level 30 — FINAL JUDGMENT: wave only, absolute hell ===
+  { gapMul: 0.3, spikeBias: 1, blockBias: 0, sawBias: 0, rapid: true, laserGate: true }, // 29
 ];
 
 
