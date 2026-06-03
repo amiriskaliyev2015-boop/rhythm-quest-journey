@@ -1049,10 +1049,62 @@ export default function GeometryGame() {
   const [selected, setSelected] = useState<number | null>(null);
   const [save, setSave] = useState<GameSave>(() => readGameSave());
   const [shopMsg, setShopMsg] = useState<string | null>(null);
+  const loadCloudSave = useServerFn(getGameSave);
+  const saveCloudSave = useServerFn(saveGameSave);
+  const signedInRef = useRef(false);
+  const cloudReadyRef = useRef(false);
 
   useEffect(() => {
     setSave(readGameSave());
   }, []);
+
+  const commitSave = useCallback(
+    (nextSave: GameSave) => {
+      const normalized = normalizeSave(nextSave);
+      writeGameSave(normalized);
+      if (signedInRef.current && cloudReadyRef.current) {
+        void saveCloudSave({ data: normalized }).catch(() => {});
+      }
+      return normalized;
+    },
+    [saveCloudSave],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncCloud = async () => {
+      const { data } = await supabase.auth.getSession();
+      signedInRef.current = !!data.session;
+      if (!data.session) {
+        cloudReadyRef.current = false;
+        return;
+      }
+
+      cloudReadyRef.current = false;
+      try {
+        const cloud = await loadCloudSave();
+        if (cancelled) return;
+        const merged = mergeGameSaves(readGameSave(), cloud ? normalizeSave(cloud) : null);
+        writeGameSave(merged);
+        setSave(merged);
+        await saveCloudSave({ data: merged });
+        cloudReadyRef.current = true;
+      } catch {
+        cloudReadyRef.current = true;
+      }
+    };
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
+      void syncCloud();
+    });
+    void syncCloud();
+
+    return () => {
+      cancelled = true;
+      subscription.subscription.unsubscribe();
+    };
+  }, [loadCloudSave, saveCloudSave]);
 
   const completed = new Set(save.completed);
   const ownedSkins = new Set(save.ownedSkins);
@@ -1063,9 +1115,7 @@ export default function GeometryGame() {
     if (!skin) return;
     if (ownedSkins.has(id)) {
       setSave((prev) => {
-        const next = normalizeSave({ ...prev, equippedSkinId: id });
-        writeGameSave(next);
-        return next;
+        return commitSave({ ...prev, equippedSkinId: id });
       });
       setShopMsg(`EQUIPPED · ${skin.name.toUpperCase()}`);
       return;
@@ -1075,14 +1125,12 @@ export default function GeometryGame() {
       return;
     }
     setSave((prev) => {
-      const next = normalizeSave({
+      return commitSave({
         ...prev,
         prisms: prev.prisms - skin.price,
         ownedSkins: [...prev.ownedSkins, id],
         equippedSkinId: id,
       });
-      writeGameSave(next);
-      return next;
     });
     setShopMsg(`UNLOCKED · ${skin.name.toUpperCase()}`);
   };
@@ -1092,17 +1140,15 @@ export default function GeometryGame() {
       setSave((prev) => {
         const nextCompleted = new Set(prev.completed);
         nextCompleted.add(i);
-        const next = normalizeSave({
+        return commitSave({
           ...prev,
           completed: [...nextCompleted],
           bestAttempts: info.isNewRecord ? { ...prev.bestAttempts, [i]: info.attempts } : prev.bestAttempts,
           prisms: prev.prisms + info.reward,
         });
-        writeGameSave(next);
-        return next;
       });
     },
-    [],
+    [commitSave],
   );
 
   const selectLevel = (i: number) => {
