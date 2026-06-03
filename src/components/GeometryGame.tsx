@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
 import { LevelMusic } from "@/lib/game-music";
+import { supabase } from "@/integrations/supabase/client";
+import { getGameSave, saveGameSave } from "@/lib/game-save.functions";
 
 const GROUND_H = 80;
 const PLAYER_SIZE = 40;
@@ -135,6 +138,23 @@ const writeGameSave = (save: GameSave) => {
     );
     window.localStorage.setItem("gd-equipped", normalized.equippedSkinId);
   } catch {}
+};
+
+const mergeGameSaves = (local: GameSave, cloud: GameSave | null): GameSave => {
+  if (!cloud) return normalizeSave(local);
+  const bestAttempts = { ...cloud.bestAttempts };
+  for (const [level, attempts] of Object.entries(local.bestAttempts)) {
+    const cloudAttempts = bestAttempts[Number(level)];
+    bestAttempts[Number(level)] = cloudAttempts ? Math.min(cloudAttempts, attempts) : attempts;
+  }
+  const ownedSkins = Array.from(new Set([...cloud.ownedSkins, ...local.ownedSkins]));
+  return normalizeSave({
+    completed: Array.from(new Set([...cloud.completed, ...local.completed])),
+    bestAttempts,
+    prisms: Math.max(local.prisms, cloud.prisms),
+    ownedSkins,
+    equippedSkinId: ownedSkins.includes(local.equippedSkinId) ? local.equippedSkinId : cloud.equippedSkinId,
+  });
 };
 
 interface Props {
