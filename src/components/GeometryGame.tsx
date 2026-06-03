@@ -1086,8 +1086,8 @@ export default function GeometryGame() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       (window as any).__addPrisms = (amount: number) => {
-        setSave((prev) => commitSave({ ...prev, prisms: prev.prisms + amount }));
-        return `Added ${amount.toLocaleString()} prisms! Total: ${(prev) => (prev.prisms + amount).toLocaleString()}`;
+        setSave((prev: GameSave) => commitSave({ ...prev, prisms: prev.prisms + amount }));
+        return `Added ${amount.toLocaleString()} prisms!`;
       };
     }
   }, [commitSave]);
