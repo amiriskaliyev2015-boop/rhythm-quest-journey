@@ -601,6 +601,7 @@ function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }
         }
 
         const prog = Math.min(1, scrollX / level.length);
+        progressRef.current = prog;
         setProgress(prog);
         if (prog >= 1) win();
       }
