@@ -93,6 +93,9 @@ const NAMES = [
   "Absolute Zero",
   "Spike Hell",
   "Arrow Apocalypse",
+  "Graviton Collapse",
+  "Star Eater",
+  "Final Judgment",
 ];
 
 const VEHICLES: Vehicle[] = [
