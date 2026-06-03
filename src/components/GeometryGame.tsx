@@ -40,6 +40,103 @@ const RARITY_COLOR: Record<Skin["rarity"], string> = {
   MYTHIC: "#f43f5e",
 };
 
+const SAVE_KEY = "prism-rush-save-v2";
+
+type GameSave = {
+  completed: number[];
+  bestAttempts: Record<number, number>;
+  prisms: number;
+  ownedSkins: string[];
+  equippedSkinId: string;
+};
+
+const defaultSave = (): GameSave => ({
+  completed: [],
+  bestAttempts: {},
+  prisms: 0,
+  ownedSkins: ["default"],
+  equippedSkinId: "default",
+});
+
+const validSkinIds = new Set(SKINS.map((skin) => skin.id));
+
+const normalizeSave = (save: Partial<GameSave>): GameSave => {
+  const ownedSkins = Array.from(
+    new Set(["default", ...(Array.isArray(save.ownedSkins) ? save.ownedSkins : [])]),
+  ).filter((id) => validSkinIds.has(id));
+  const equippedSkinId =
+    typeof save.equippedSkinId === "string" && ownedSkins.includes(save.equippedSkinId)
+      ? save.equippedSkinId
+      : "default";
+
+  return {
+    completed: Array.isArray(save.completed)
+      ? save.completed.filter((level) => Number.isInteger(level) && level >= 0 && level < LEVELS.length)
+      : [],
+    bestAttempts:
+      save.bestAttempts && typeof save.bestAttempts === "object"
+        ? Object.fromEntries(
+            Object.entries(save.bestAttempts).filter(
+              ([level, attempts]) => Number.isInteger(Number(level)) && Number(attempts) > 0,
+            ),
+          ) as Record<number, number>
+        : {},
+    prisms: Math.max(0, Math.floor(Number(save.prisms) || 0)),
+    ownedSkins,
+    equippedSkinId,
+  };
+};
+
+const readGameSave = (): GameSave => {
+  if (typeof window === "undefined") return defaultSave();
+  const storage = window.localStorage;
+
+  try {
+    const saved = storage.getItem(SAVE_KEY);
+    if (saved) return normalizeSave(JSON.parse(saved) as Partial<GameSave>);
+  } catch {}
+
+  const legacy = defaultSave();
+  try {
+    const completed = storage.getItem("gd-completed");
+    if (completed) legacy.completed = JSON.parse(completed) as number[];
+  } catch {}
+  try {
+    const best = storage.getItem("gd-best");
+    if (best) legacy.bestAttempts = JSON.parse(best) as Record<number, number>;
+  } catch {}
+  try {
+    const prisms = storage.getItem("gd-prisms");
+    if (prisms) legacy.prisms = Number(prisms) || 0;
+  } catch {}
+  try {
+    const skins = storage.getItem("gd-skins");
+    if (skins) legacy.ownedSkins = ["default", ...(JSON.parse(skins) as string[])];
+  } catch {}
+  try {
+    const equipped = storage.getItem("gd-equipped");
+    if (equipped) legacy.equippedSkinId = equipped;
+  } catch {}
+
+  return normalizeSave(legacy);
+};
+
+const writeGameSave = (save: GameSave) => {
+  if (typeof window === "undefined") return;
+  const normalized = normalizeSave(save);
+  try {
+    window.localStorage.setItem(SAVE_KEY, JSON.stringify(normalized));
+    window.localStorage.setItem("gd-completed", JSON.stringify(normalized.completed));
+    window.localStorage.setItem("gd-best", JSON.stringify(normalized.bestAttempts));
+    window.localStorage.setItem("gd-prisms", String(normalized.prisms));
+    window.localStorage.setItem(
+      "gd-skins",
+      JSON.stringify(normalized.ownedSkins.filter((id) => id !== "default")),
+    );
+    window.localStorage.setItem("gd-equipped", normalized.equippedSkinId);
+  } catch {}
+};
+
 interface Props {
   level: Level;
   bestAttempts: number | null;
@@ -930,82 +1027,58 @@ function Game({ level, bestAttempts, skin, onExit, onWin }: Props) {
 export default function GeometryGame() {
   const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
-  // SSR-safe defaults — hydrate from localStorage in an effect to avoid mismatch.
-  const [completed, setCompleted] = useState<Set<number>>(new Set());
-  const [bestAttempts, setBestAttempts] = useState<Record<number, number>>({});
-  const [prisms, setPrisms] = useState<number>(0);
-  const [ownedSkins, setOwnedSkins] = useState<Set<string>>(new Set(["default"]));
-  const [equippedSkinId, setEquippedSkinId] = useState<string>("default");
+  const [save, setSave] = useState<GameSave>(() => readGameSave());
   const [shopMsg, setShopMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const c = localStorage.getItem("gd-completed");
-      if (c) setCompleted(new Set(JSON.parse(c) as number[]));
-      const b = localStorage.getItem("gd-best");
-      if (b) setBestAttempts(JSON.parse(b) as Record<number, number>);
-      const p = localStorage.getItem("gd-prisms");
-      if (p) setPrisms(Number(p) || 0);
-      const o = localStorage.getItem("gd-skins");
-      if (o) setOwnedSkins(new Set(["default", ...(JSON.parse(o) as string[])]));
-      const e = localStorage.getItem("gd-equipped");
-      if (e) setEquippedSkinId(e);
-    } catch {}
+    setSave(readGameSave());
   }, []);
 
-  const equippedSkin = SKINS.find((s) => s.id === equippedSkinId) ?? SKINS[0];
+  const completed = new Set(save.completed);
+  const ownedSkins = new Set(save.ownedSkins);
+  const equippedSkin = SKINS.find((s) => s.id === save.equippedSkinId) ?? SKINS[0];
 
   const buySkin = (id: string) => {
     const skin = SKINS.find((s) => s.id === id);
     if (!skin) return;
     if (ownedSkins.has(id)) {
-      setEquippedSkinId(id);
-      try { localStorage.setItem("gd-equipped", id); } catch {}
+      setSave((prev) => {
+        const next = normalizeSave({ ...prev, equippedSkinId: id });
+        writeGameSave(next);
+        return next;
+      });
       setShopMsg(`EQUIPPED · ${skin.name.toUpperCase()}`);
       return;
     }
-    if (prisms < skin.price) {
-      setShopMsg(`NEED ${skin.price - prisms} MORE ◆`);
+    if (save.prisms < skin.price) {
+      setShopMsg(`NEED ${skin.price - save.prisms} MORE ◆`);
       return;
     }
-    const nextPrisms = prisms - skin.price;
-    const nextOwned = new Set(ownedSkins);
-    nextOwned.add(id);
-    setPrisms(nextPrisms);
-    setOwnedSkins(nextOwned);
-    setEquippedSkinId(id);
-    try {
-      localStorage.setItem("gd-prisms", String(nextPrisms));
-      localStorage.setItem("gd-skins", JSON.stringify([...nextOwned].filter((x) => x !== "default")));
-      localStorage.setItem("gd-equipped", id);
-    } catch {}
+    setSave((prev) => {
+      const next = normalizeSave({
+        ...prev,
+        prisms: prev.prisms - skin.price,
+        ownedSkins: [...prev.ownedSkins, id],
+        equippedSkinId: id,
+      });
+      writeGameSave(next);
+      return next;
+    });
     setShopMsg(`UNLOCKED · ${skin.name.toUpperCase()}`);
   };
 
   const handleWin = useCallback(
     (i: number, info: { attempts: number; reward: number; isNewRecord: boolean }) => {
-      setCompleted((prev) => {
-        const next = new Set(prev);
-        next.add(i);
-        try {
-          localStorage.setItem("gd-completed", JSON.stringify([...next]));
-        } catch {}
-        return next;
-      });
-      if (info.isNewRecord) {
-        setBestAttempts((prev) => {
-          const next = { ...prev, [i]: info.attempts };
-          try {
-            localStorage.setItem("gd-best", JSON.stringify(next));
-          } catch {}
-          return next;
+      setSave((prev) => {
+        const nextCompleted = new Set(prev.completed);
+        nextCompleted.add(i);
+        const next = normalizeSave({
+          ...prev,
+          completed: [...nextCompleted],
+          bestAttempts: info.isNewRecord ? { ...prev.bestAttempts, [i]: info.attempts } : prev.bestAttempts,
+          prisms: prev.prisms + info.reward,
         });
-      }
-      setPrisms((p) => {
-        const next = p + info.reward;
-        try {
-          localStorage.setItem("gd-prisms", String(next));
-        } catch {}
+        writeGameSave(next);
         return next;
       });
     },
@@ -1040,7 +1113,7 @@ export default function GeometryGame() {
               SKIN VAULT
             </h2>
             <div className="px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
-              <span className="text-cyan-300">◆</span> {prisms}
+              <span className="text-cyan-300">◆</span> {save.prisms}
             </div>
           </div>
           {shopMsg && (
@@ -1051,8 +1124,8 @@ export default function GeometryGame() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {SKINS.map((s) => {
               const owned = ownedSkins.has(s.id);
-              const equipped = equippedSkinId === s.id;
-              const canAfford = prisms >= s.price;
+              const equipped = save.equippedSkinId === s.id;
+              const canAfford = save.prisms >= s.price;
               return (
                 <div
                   key={s.id}
@@ -1172,7 +1245,7 @@ export default function GeometryGame() {
           </div>
 
           <p className="mt-8 text-white/40 text-xs tracking-widest">
-            ◆ {prisms.toLocaleString()} PRISMS · {ownedSkins.size}/{SKINS.length} SKINS
+            ◆ {save.prisms.toLocaleString()} PRISMS · {ownedSkins.size}/{SKINS.length} SKINS
           </p>
           <p className="mt-2 text-white/30 text-xs tracking-widest">
             GEM · ROCKET · STAR · RHOMB · BOLT
@@ -1188,7 +1261,7 @@ export default function GeometryGame() {
       <Game
         key={selected}
         level={level}
-        bestAttempts={bestAttempts[selected] ?? null}
+        bestAttempts={save.bestAttempts[selected] ?? null}
         skin={equippedSkin}
         onExit={goToMenu}
         onWin={(info) => handleWin(selected, info)}
@@ -1214,7 +1287,7 @@ export default function GeometryGame() {
             25 levels · 5 shapes · neon shape-runner
           </p>
           <div className="mt-4 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white tracking-[0.25em] text-sm font-bold">
-            <span className="text-cyan-300">◆</span> {prisms.toLocaleString()} PRISMS
+            <span className="text-cyan-300">◆</span> {save.prisms.toLocaleString()} PRISMS
             <button
               onClick={() => { setShopMsg(null); setScreen("shop"); }}
               className="ml-2 px-3 py-1 rounded-full bg-white text-black text-xs tracking-widest hover:scale-105 transition"
@@ -1270,9 +1343,9 @@ export default function GeometryGame() {
                     <span>SPEED {Math.round(lv.speed)}</span>
                     <span>{done ? "✓ DONE" : "~3:00"}</span>
                   </div>
-                  {bestAttempts[i] !== undefined && (
+                  {save.bestAttempts[i] !== undefined && (
                     <div className="mt-2 text-[10px] tracking-widest text-white/70">
-                      BEST · {bestAttempts[i]} {bestAttempts[i] === 1 ? "ATTEMPT" : "ATTEMPTS"}
+                      BEST · {save.bestAttempts[i]} {save.bestAttempts[i] === 1 ? "ATTEMPT" : "ATTEMPTS"}
                     </div>
                   )}
 
