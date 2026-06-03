@@ -188,6 +188,43 @@ const computeReward = (levelIndex: number, attempts: number, prevBest: number | 
   return { reward: base + bonus + starterBonus, isNewRecord };
 };
 
+// Reward prisms for beating your % progress record on a level (paid on death).
+const computePercentReward = (levelIndex: number, percent: number, prevBest: number) => {
+  const isNewRecord = percent > prevBest;
+  if (!isNewRecord) return { reward: 0, isNewRecord: false, delta: 0 };
+  const delta = percent - prevBest;
+  const reward = Math.max(10, delta * 10) * (1 + Math.floor(levelIndex / 5));
+  return { reward, isNewRecord: true, delta };
+};
+
+const BEST_PCT_KEY = "prism-rush-best-percent-v1";
+const readBestPercents = (): Record<number, number> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(BEST_PCT_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<number, number> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      const lvl = Number(k);
+      const pct = Number(v);
+      if (Number.isInteger(lvl) && Number.isFinite(pct) && pct >= 0 && pct <= 100) {
+        out[lvl] = Math.floor(pct);
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+};
+const writeBestPercents = (m: Record<number, number>) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(BEST_PCT_KEY, JSON.stringify(m));
+  } catch {}
+};
+
 
 const VEHICLE_LABELS: Record<Vehicle, string> = {
   cube: "GEM",
