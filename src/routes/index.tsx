@@ -1,6 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import GeometryGame from "@/components/GeometryGame";
 import { AuthBadge } from "@/components/AuthBadge";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,6 +33,32 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const navigate = useNavigate();
+  const [checked, setChecked] = useState(false);
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setAuthed(!!session);
+      setChecked(true);
+      if (!session) navigate({ to: "/auth", replace: true });
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      setAuthed(!!data.session);
+      setChecked(true);
+      if (!data.session) navigate({ to: "/auth", replace: true });
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [navigate]);
+
+  if (!checked || !authed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <p className="text-sm opacity-70">Загрузка...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <AuthBadge />
