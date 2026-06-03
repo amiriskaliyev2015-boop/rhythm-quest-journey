@@ -1380,6 +1380,14 @@ export default function GeometryGame() {
           {LEVELS.map((lv, i) => {
             const done = completed.has(i);
             const stars = Math.min(5, Math.ceil((i + 1) / 2.2));
+            const difficultyEmoji =
+              stars <= 2
+                ? ["😊", "😄"][i % 2]
+                : stars === 3
+                ? ["🤔", "😐"][i % 2]
+                : stars === 4
+                ? ["😤", "😠"][i % 2]
+                : ["😈", "👿", "💀", "🤬"][i % 4];
             return (
               <button
                 key={i}
@@ -1404,7 +1412,7 @@ export default function GeometryGame() {
                       {VEHICLE_LABELS[lv.startingVehicle]}
                     </span>
                   </div>
-                  <h3 className="mt-3 text-2xl font-black tracking-wider">{lv.name}</h3>
+                  <h3 className="mt-3 text-2xl font-black tracking-wider">{difficultyEmoji} {lv.name}</h3>
                   <div className="mt-4 flex gap-1">
                     {Array.from({ length: 5 }).map((_, s) => (
                       <span
