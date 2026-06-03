@@ -1430,10 +1430,13 @@ export default function GeometryGame() {
         key={selected}
         level={level}
         bestAttempts={save.bestAttempts[selected] ?? null}
+        bestPercent={bestPercents[selected] ?? 0}
         skin={equippedSkin}
         onExit={goToMenu}
         onWin={(info) => handleWin(selected, info)}
+        onDeath={(info) => handleDeath(selected, info)}
       />
+
     );
   }
 
