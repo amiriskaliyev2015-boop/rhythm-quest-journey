@@ -1060,12 +1060,25 @@ function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }
             <div className="text-6xl font-black text-red-500 tracking-widest drop-shadow-[0_0_30px_rgba(239,68,68,0.8)]">
               CRASHED
             </div>
-            <div className="mt-2 text-white/80 text-sm tracking-widest">
+            {deathInfo && (
+              <div className="mt-3 space-y-1">
+                <div className="text-white text-lg font-bold tracking-widest">
+                  {deathInfo.percent}% · BEST {Math.max(bestPercent, deathInfo.percent)}%
+                </div>
+                {deathInfo.isNewRecord && deathInfo.reward > 0 && (
+                  <div className="text-yellow-300 text-sm font-black tracking-[0.25em] animate-pulse">
+                    ★ NEW RECORD · +{deathInfo.reward} ◆
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="mt-3 text-white/80 text-sm tracking-widest">
               TAP / SPACE TO RETRY
             </div>
           </div>
         </div>
       )}
+
 
       {state === "won" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
