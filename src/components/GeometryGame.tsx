@@ -1240,6 +1240,19 @@ export default function GeometryGame() {
     [commitSave],
   );
 
+  const handleDeath = useCallback(
+    (i: number, info: { percent: number; reward: number; isNewRecord: boolean }) => {
+      if (!info.isNewRecord || info.reward <= 0) return;
+      setBestPercents((prev) => {
+        const next = { ...prev, [i]: info.percent };
+        writeBestPercents(next);
+        return next;
+      });
+      setSave((prev) => commitSave({ ...prev, prisms: prev.prisms + info.reward }));
+    },
+    [commitSave],
+  );
+
   const selectLevel = (i: number) => {
     setSelected(i);
     setScreen("playing");
