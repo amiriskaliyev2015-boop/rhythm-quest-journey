@@ -1082,6 +1082,16 @@ export default function GeometryGame() {
     [saveCloudSave],
   );
 
+  // Dev helper — open browser console and type: __addPrisms(150000)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).__addPrisms = (amount: number) => {
+        setSave((prev: GameSave) => commitSave({ ...prev, prisms: prev.prisms + amount }));
+        return `Added ${amount.toLocaleString()} prisms!`;
+      };
+    }
+  }, [commitSave]);
+
   useEffect(() => {
     let cancelled = false;
 
