@@ -40,6 +40,103 @@ const RARITY_COLOR: Record<Skin["rarity"], string> = {
   MYTHIC: "#f43f5e",
 };
 
+const SAVE_KEY = "prism-rush-save-v2";
+
+type GameSave = {
+  completed: number[];
+  bestAttempts: Record<number, number>;
+  prisms: number;
+  ownedSkins: string[];
+  equippedSkinId: string;
+};
+
+const defaultSave = (): GameSave => ({
+  completed: [],
+  bestAttempts: {},
+  prisms: 0,
+  ownedSkins: ["default"],
+  equippedSkinId: "default",
+});
+
+const validSkinIds = new Set(SKINS.map((skin) => skin.id));
+
+const normalizeSave = (save: Partial<GameSave>): GameSave => {
+  const ownedSkins = Array.from(
+    new Set(["default", ...(Array.isArray(save.ownedSkins) ? save.ownedSkins : [])]),
+  ).filter((id) => validSkinIds.has(id));
+  const equippedSkinId =
+    typeof save.equippedSkinId === "string" && ownedSkins.includes(save.equippedSkinId)
+      ? save.equippedSkinId
+      : "default";
+
+  return {
+    completed: Array.isArray(save.completed)
+      ? save.completed.filter((level) => Number.isInteger(level) && level >= 0 && level < LEVELS.length)
+      : [],
+    bestAttempts:
+      save.bestAttempts && typeof save.bestAttempts === "object"
+        ? Object.fromEntries(
+            Object.entries(save.bestAttempts).filter(
+              ([level, attempts]) => Number.isInteger(Number(level)) && Number(attempts) > 0,
+            ),
+          ) as Record<number, number>
+        : {},
+    prisms: Math.max(0, Math.floor(Number(save.prisms) || 0)),
+    ownedSkins,
+    equippedSkinId,
+  };
+};
+
+const readGameSave = (): GameSave => {
+  if (typeof window === "undefined") return defaultSave();
+  const storage = window.localStorage;
+
+  try {
+    const saved = storage.getItem(SAVE_KEY);
+    if (saved) return normalizeSave(JSON.parse(saved) as Partial<GameSave>);
+  } catch {}
+
+  const legacy = defaultSave();
+  try {
+    const completed = storage.getItem("gd-completed");
+    if (completed) legacy.completed = JSON.parse(completed) as number[];
+  } catch {}
+  try {
+    const best = storage.getItem("gd-best");
+    if (best) legacy.bestAttempts = JSON.parse(best) as Record<number, number>;
+  } catch {}
+  try {
+    const prisms = storage.getItem("gd-prisms");
+    if (prisms) legacy.prisms = Number(prisms) || 0;
+  } catch {}
+  try {
+    const skins = storage.getItem("gd-skins");
+    if (skins) legacy.ownedSkins = ["default", ...(JSON.parse(skins) as string[])];
+  } catch {}
+  try {
+    const equipped = storage.getItem("gd-equipped");
+    if (equipped) legacy.equippedSkinId = equipped;
+  } catch {}
+
+  return normalizeSave(legacy);
+};
+
+const writeGameSave = (save: GameSave) => {
+  if (typeof window === "undefined") return;
+  const normalized = normalizeSave(save);
+  try {
+    window.localStorage.setItem(SAVE_KEY, JSON.stringify(normalized));
+    window.localStorage.setItem("gd-completed", JSON.stringify(normalized.completed));
+    window.localStorage.setItem("gd-best", JSON.stringify(normalized.bestAttempts));
+    window.localStorage.setItem("gd-prisms", String(normalized.prisms));
+    window.localStorage.setItem(
+      "gd-skins",
+      JSON.stringify(normalized.ownedSkins.filter((id) => id !== "default")),
+    );
+    window.localStorage.setItem("gd-equipped", normalized.equippedSkinId);
+  } catch {}
+};
+
 interface Props {
   level: Level;
   bestAttempts: number | null;
