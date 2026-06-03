@@ -1134,6 +1134,7 @@ export default function GeometryGame() {
 
   useEffect(() => {
     setSave(readGameSave());
+    setBestPercents(readBestPercents());
   }, []);
 
   const commitSave = useCallback(
