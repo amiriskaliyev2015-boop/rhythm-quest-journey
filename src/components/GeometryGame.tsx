@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
 import { LevelMusic } from "@/lib/game-music";
-import { supabase } from "@/integrations/supabase/client";
-import { getGameSave, saveGameSave } from "@/lib/game-save.functions";
 
 const GROUND_H = 80;
 const PLAYER_SIZE = 40;
@@ -1127,10 +1124,6 @@ export default function GeometryGame() {
   const [save, setSave] = useState<GameSave>(defaultSave);
   const [bestPercents, setBestPercents] = useState<Record<number, number>>({});
   const [shopMsg, setShopMsg] = useState<string | null>(null);
-  const loadCloudSave = useServerFn(getGameSave);
-  const saveCloudSave = useServerFn(saveGameSave);
-  const signedInRef = useRef(false);
-  const cloudReadyRef = useRef(false);
 
   useEffect(() => {
     setSave(readGameSave());
@@ -1141,12 +1134,9 @@ export default function GeometryGame() {
     (nextSave: GameSave) => {
       const normalized = normalizeSave(nextSave);
       writeGameSave(normalized);
-      if (signedInRef.current && cloudReadyRef.current) {
-        void saveCloudSave({ data: normalized }).catch(() => {});
-      }
       return normalized;
     },
-    [saveCloudSave],
+    [],
   );
 
   // Dev helper — open browser console and type: __addPrisms(150000)
@@ -1158,42 +1148,6 @@ export default function GeometryGame() {
       };
     }
   }, [commitSave]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const syncCloud = async () => {
-      const { data } = await supabase.auth.getSession();
-      signedInRef.current = !!data.session;
-      if (!data.session) {
-        cloudReadyRef.current = false;
-        return;
-      }
-
-      cloudReadyRef.current = false;
-      try {
-        const cloud = await loadCloudSave();
-        if (cancelled) return;
-        const merged = mergeGameSaves(readGameSave(), cloud ? normalizeSave(cloud) : null);
-        writeGameSave(merged);
-        setSave(merged);
-        await saveCloudSave({ data: merged });
-        cloudReadyRef.current = true;
-      } catch {
-        cloudReadyRef.current = true;
-      }
-    };
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
-      void syncCloud();
-    });
-    void syncCloud();
-
-    return () => {
-      cancelled = true;
-      subscription.subscription.unsubscribe();
-    };
-  }, [loadCloudSave, saveCloudSave]);
 
   const completed = new Set(save.completed);
   const ownedSkins = new Set(save.ownedSkins);
