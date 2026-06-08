@@ -1265,8 +1265,8 @@ export default function GeometryGame() {
 
   if (screen === "shop") {
     return (
-      <div className="min-h-screen px-4 py-12 md:py-16 bg-[#070710]">
-        <div className="max-w-5xl mx-auto">
+      <div className="prism-stage min-h-screen px-4 py-12 md:py-16 overflow-hidden">
+        <div className="relative z-10 max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
             <button
               onClick={() => { setShopMsg(null); setScreen("intro"); }}
@@ -1359,24 +1359,7 @@ export default function GeometryGame() {
 
   if (screen === "intro") {
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0a0a12] overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {Array.from({ length: 30 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full opacity-30"
-              style={{
-                width: 2 + (i % 4),
-                height: 2 + (i % 4),
-                left: `${(i * 37) % 100}%`,
-                top: `${(i * 23) % 100}%`,
-                background: i % 2 === 0 ? "#22d3ee" : "#a855f7",
-                animation: `pulse ${2 + (i % 5)}s ease-in-out ${i * 0.15}s infinite`,
-              }}
-            />
-          ))}
-        </div>
-
+      <div className="prism-stage fixed inset-0 flex flex-col items-center justify-center overflow-hidden">
         <div className="relative z-10 text-center px-4">
           <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-[0_0_40px_rgba(34,211,238,0.4)]">
             GEO
@@ -1442,8 +1425,8 @@ export default function GeometryGame() {
 
 
   return (
-    <div className="min-h-screen px-4 py-12 md:py-20">
-      <div className="max-w-5xl mx-auto">
+    <div className="prism-stage min-h-screen px-4 py-12 md:py-20 overflow-hidden">
+      <div className="relative z-10 max-w-5xl mx-auto">
         <div className="text-center mb-12">
           <h1
             className="text-5xl md:text-7xl font-black tracking-widest bg-clip-text text-transparent"

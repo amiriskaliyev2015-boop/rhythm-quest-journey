@@ -13,7 +13,9 @@ dist-ssr
 .output
 .vinxi
 .tanstack/**
+.vercel/
 .nitro
+supabase/.temp/
 *.local
 .env
 .env.*
