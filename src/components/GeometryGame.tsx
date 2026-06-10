@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
 import { generateAiLevel, getAiCoachTip } from "@/lib/ai-game.functions";
 import { LevelMusic } from "@/lib/game-music";
+import { supabase } from "@/integrations/supabase/client";
 
 const GROUND_H = 80;
 const PLAYER_SIZE = 40;
@@ -62,6 +63,13 @@ type GameSave = {
   prisms: number;
   ownedSkins: string[];
   equippedSkinId: string;
+};
+
+type LeaderboardRow = {
+  id: string;
+  display_name: string | null;
+  best_level: number;
+  total_attempts: number;
 };
 
 const defaultSave = (): GameSave => ({
@@ -1137,11 +1145,14 @@ function Game({ level, bestAttempts, bestPercent, skin, coachTip, coachLoading, 
 }
 
 export default function GeometryGame() {
-  const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "playing">("intro");
+  const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "dashboard" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
   const [save, setSave] = useState<GameSave>(defaultSave);
   const [bestPercents, setBestPercents] = useState<Record<number, number>>({});
   const [shopMsg, setShopMsg] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const [aiPrompt, setAiPrompt] = useState("neon rift");
   const [aiDifficulty, setAiDifficulty] = useState<"easy" | "normal" | "hard" | "rage">("normal");
   const [aiLevel, setAiLevel] = useState<Level | null>(null);
@@ -1165,6 +1176,56 @@ export default function GeometryGame() {
     },
     [],
   );
+
+  const syncProfileStats = useCallback(async (nextSave: GameSave) => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+
+      const completedLevels = nextSave.completed.filter((level) => level >= 0 && level < LEVELS.length);
+      const bestLevel = completedLevels.length > 0 ? Math.max(...completedLevels) + 1 : 0;
+      const totalAttempts = Object.values(nextSave.bestAttempts).reduce((sum, attempts) => sum + attempts, 0);
+
+      await supabase.from("profiles").upsert(
+        {
+          user_id: data.user.id,
+          display_name: data.user.email?.split("@")[0] ?? "Player",
+          best_level: bestLevel,
+          total_attempts: totalAttempts,
+        },
+        { onConflict: "user_id" },
+      );
+    } catch {
+      // Dashboard still works with local records if Supabase is unavailable.
+    }
+  }, []);
+
+  const loadLeaderboard = useCallback(async () => {
+    setLeaderboardLoading(true);
+    setLeaderboardError(null);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,display_name,best_level,total_attempts")
+        .order("best_level", { ascending: false })
+        .order("total_attempts", { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+      setLeaderboard((data ?? []) as LeaderboardRow[]);
+    } catch {
+      setLeaderboard([]);
+      setLeaderboardError("Global leaderboard is unavailable right now.");
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (screen === "dashboard") {
+      void loadLeaderboard();
+    }
+  }, [loadLeaderboard, screen]);
 
   // Dev helper — open browser console and type: __addPrisms(150000)
   useEffect(() => {
@@ -1210,15 +1271,17 @@ export default function GeometryGame() {
       setSave((prev) => {
         const nextCompleted = new Set(prev.completed);
         nextCompleted.add(i);
-        return commitSave({
+        const nextSave = commitSave({
           ...prev,
           completed: [...nextCompleted],
           bestAttempts: info.isNewRecord ? { ...prev.bestAttempts, [i]: info.attempts } : prev.bestAttempts,
           prisms: prev.prisms + info.reward,
         });
+        void syncProfileStats(nextSave);
+        return nextSave;
       });
     },
-    [commitSave],
+    [commitSave, syncProfileStats],
   );
 
   const handleDeath = useCallback(
@@ -1282,6 +1345,165 @@ export default function GeometryGame() {
     setSelected(null);
     setScreen("levels");
   };
+
+  const recordRows = LEVELS.map((level, index) => ({
+    index,
+    level,
+    completed: completed.has(index),
+    bestAttempts: save.bestAttempts[index],
+    bestPercent: bestPercents[index] ?? (completed.has(index) ? 100 : 0),
+  }));
+  const completedCount = save.completed.length;
+  const totalBestAttempts = Object.values(save.bestAttempts).reduce((sum, attempts) => sum + attempts, 0);
+  const bestLevel = completedCount > 0 ? Math.max(...save.completed) + 1 : 0;
+  const averageProgress =
+    LEVELS.length > 0
+      ? Math.round(recordRows.reduce((sum, row) => sum + Math.max(row.bestPercent, row.completed ? 100 : 0), 0) / LEVELS.length)
+      : 0;
+  const attemptLeaderboard = recordRows
+    .filter((row) => typeof row.bestAttempts === "number")
+    .sort((a, b) => (a.bestAttempts ?? 9999) - (b.bestAttempts ?? 9999))
+    .slice(0, 8);
+  const progressLeaderboard = recordRows
+    .filter((row) => row.bestPercent > 0 || row.completed)
+    .sort((a, b) => Math.max(b.bestPercent, b.completed ? 100 : 0) - Math.max(a.bestPercent, a.completed ? 100 : 0))
+    .slice(0, 8);
+
+  if (screen === "dashboard") {
+    return (
+      <div className="prism-stage min-h-screen px-4 py-12 md:py-16 overflow-hidden">
+        <div className="relative z-10 mx-auto max-w-6xl text-white">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <button
+              onClick={() => setScreen("intro")}
+              className="rounded-md bg-white/10 px-4 py-2 text-sm font-bold tracking-widest text-white transition hover:bg-white/20"
+            >
+              BACK
+            </button>
+            <h2
+              className="text-4xl font-black tracking-[0.2em] text-transparent bg-clip-text md:text-5xl"
+              style={{ backgroundImage: "linear-gradient(120deg, #22d3ee, #a855f7, #f472b6)" }}
+            >
+              DASHBOARD
+            </h2>
+            <button
+              onClick={() => {
+                setShopMsg(null);
+                setScreen("levels");
+              }}
+              className="rounded-md bg-cyan-300 px-4 py-2 text-sm font-black tracking-widest text-black transition hover:scale-105"
+            >
+              PLAY
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              ["COMPLETED", `${completedCount}/${LEVELS.length}`],
+              ["BEST LEVEL", bestLevel > 0 ? String(bestLevel).padStart(2, "0") : "00"],
+              ["PRISMS", save.prisms.toLocaleString()],
+              ["AVG PROGRESS", `${averageProgress}%`],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-white/10 bg-black/35 p-4 backdrop-blur">
+                <div className="text-[10px] font-black tracking-[0.25em] text-white/45">{label}</div>
+                <div className="mt-2 text-2xl font-black tracking-widest">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <section className="rounded-lg border border-cyan-300/20 bg-black/35 p-5 backdrop-blur">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="text-xl font-black tracking-[0.2em]">PERSONAL RECORDS</h3>
+                <span className="text-xs font-bold tracking-widest text-white/45">
+                  TOTAL BEST ATTEMPTS {totalBestAttempts || 0}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+                  <thead className="text-[10px] font-black tracking-[0.25em] text-white/45">
+                    <tr className="border-b border-white/10">
+                      <th className="py-3 pr-4">LEVEL</th>
+                      <th className="py-3 pr-4">VEHICLE</th>
+                      <th className="py-3 pr-4">BEST %</th>
+                      <th className="py-3 pr-4">BEST ATTEMPTS</th>
+                      <th className="py-3">STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recordRows.map((row) => (
+                      <tr key={row.index} className="border-b border-white/5 text-white/80">
+                        <td className="py-3 pr-4 font-black tracking-wider">
+                          {String(row.index + 1).padStart(2, "0")} · {row.level.name}
+                        </td>
+                        <td className="py-3 pr-4 text-xs font-bold tracking-widest">{VEHICLE_LABELS[row.level.startingVehicle]}</td>
+                        <td className="py-3 pr-4 font-bold">{Math.max(row.bestPercent, row.completed ? 100 : 0)}%</td>
+                        <td className="py-3 pr-4 font-bold">{row.bestAttempts ?? "-"}</td>
+                        <td className="py-3 text-xs font-black tracking-widest text-cyan-200">
+                          {row.completed ? "CLEARED" : row.bestPercent > 0 ? "IN PROGRESS" : "NOT STARTED"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div className="space-y-6">
+              <section className="rounded-lg border border-fuchsia-300/20 bg-black/35 p-5 backdrop-blur">
+                <h3 className="mb-4 text-xl font-black tracking-[0.2em]">GLOBAL LEADERBOARD</h3>
+                {leaderboardLoading ? (
+                  <div className="py-6 text-sm font-bold tracking-widest text-white/50">LOADING...</div>
+                ) : leaderboardError ? (
+                  <div className="py-6 text-sm font-bold tracking-widest text-red-200">{leaderboardError}</div>
+                ) : leaderboard.length === 0 ? (
+                  <div className="py-6 text-sm font-bold tracking-widest text-white/50">NO PLAYERS YET</div>
+                ) : (
+                  <div className="space-y-3">
+                    {leaderboard.map((row, index) => (
+                      <div key={row.id} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 rounded-md bg-white/5 px-3 py-3">
+                        <div className="text-sm font-black text-cyan-200">#{index + 1}</div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-black tracking-wider">{row.display_name ?? "Player"}</div>
+                          <div className="text-[10px] font-bold tracking-widest text-white/40">
+                            {row.total_attempts || 0} TOTAL ATTEMPTS
+                          </div>
+                        </div>
+                        <div className="text-right text-sm font-black tracking-widest">LEVEL {row.best_level}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-lg border border-white/10 bg-black/35 p-5 backdrop-blur">
+                <h3 className="mb-4 text-xl font-black tracking-[0.2em]">BEST RUNS</h3>
+                <div className="space-y-3">
+                  {(attemptLeaderboard.length > 0 ? attemptLeaderboard : progressLeaderboard).map((row, index) => (
+                    <div key={row.index} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 rounded-md bg-white/5 px-3 py-3">
+                      <div className="text-sm font-black text-cyan-200">#{index + 1}</div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-black tracking-wider">{row.level.name}</div>
+                        <div className="text-[10px] font-bold tracking-widest text-white/40">
+                          {VEHICLE_LABELS[row.level.startingVehicle]} · {Math.max(row.bestPercent, row.completed ? 100 : 0)}%
+                        </div>
+                      </div>
+                      <div className="text-right text-sm font-black tracking-widest">
+                        {row.bestAttempts ? `${row.bestAttempts} ATT` : `${Math.max(row.bestPercent, row.completed ? 100 : 0)}%`}
+                      </div>
+                    </div>
+                  ))}
+                  {attemptLeaderboard.length === 0 && progressLeaderboard.length === 0 && (
+                    <div className="py-6 text-sm font-bold tracking-widest text-white/50">PLAY A LEVEL TO START RANKING</div>
+                  )}
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === "shop") {
     return (
@@ -1404,6 +1626,14 @@ export default function GeometryGame() {
                          transition-all duration-200"
             >
               PLAY
+            </button>
+            <button
+              onClick={() => setScreen("dashboard")}
+              className="px-10 py-5 text-xl font-black tracking-[0.2em] text-white rounded-full border-2 border-cyan-300/50
+                         hover:border-cyan-200 hover:scale-105 active:scale-95 transition-all duration-200
+                         bg-cyan-500/10"
+            >
+              DASHBOARD
             </button>
             <button
               onClick={() => { setShopMsg(null); setScreen("shop"); }}
