@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
 import { generateAiLevel, getAiCoachTip } from "@/lib/ai-game.functions";
-import { LevelMusic } from "@/lib/game-music";
+import { LevelMusic, MenuMusic } from "@/lib/game-music";
 import { supabase } from "@/integrations/supabase/client";
 
 const GROUND_H = 80;
@@ -1153,6 +1153,11 @@ export default function GeometryGame() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const [menuMuted, setMenuMuted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("gd_muted") === "1";
+  });
+  const menuMusicRef = useRef<MenuMusic | null>(null);
   const [aiPrompt, setAiPrompt] = useState("neon rift");
   const [aiDifficulty, setAiDifficulty] = useState<"easy" | "normal" | "hard" | "rage">("normal");
   const [aiLevel, setAiLevel] = useState<Level | null>(null);
@@ -1167,6 +1172,41 @@ export default function GeometryGame() {
     setSave(readGameSave());
     setBestPercents(readBestPercents());
   }, []);
+
+  useEffect(() => {
+    if (screen === "playing") {
+      menuMusicRef.current?.stop();
+      menuMusicRef.current = null;
+      return undefined;
+    }
+
+    const music = new MenuMusic();
+    music.setMuted(menuMuted);
+    menuMusicRef.current = music;
+
+    const begin = () => {
+      void music.start();
+      window.removeEventListener("pointerdown", begin);
+      window.removeEventListener("keydown", begin);
+    };
+
+    void music.start();
+    window.addEventListener("pointerdown", begin);
+    window.addEventListener("keydown", begin);
+    return () => {
+      window.removeEventListener("pointerdown", begin);
+      window.removeEventListener("keydown", begin);
+      music.stop();
+      if (menuMusicRef.current === music) menuMusicRef.current = null;
+    };
+  }, [screen]);
+
+  useEffect(() => {
+    menuMusicRef.current?.setMuted(menuMuted);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("gd_muted", menuMuted ? "1" : "0");
+    }
+  }, [menuMuted]);
 
   const commitSave = useCallback(
     (nextSave: GameSave) => {
@@ -1643,6 +1683,14 @@ export default function GeometryGame() {
             >
               ◆ SHOP
             </button>
+            <button
+              onClick={() => setMenuMuted((muted) => !muted)}
+              className="px-8 py-5 text-base font-black tracking-[0.2em] text-white rounded-full border-2 border-white/20
+                         hover:border-white/60 hover:scale-105 active:scale-95 transition-all duration-200
+                         bg-white/5"
+            >
+              MUSIC {menuMuted ? "OFF" : "ON"}
+            </button>
           </div>
 
           <p className="mt-8 text-white/40 text-xs tracking-widest">
@@ -1705,6 +1753,12 @@ export default function GeometryGame() {
               className="ml-2 px-3 py-1 rounded-full bg-white text-black text-xs tracking-widest hover:scale-105 transition"
             >
               SHOP
+            </button>
+            <button
+              onClick={() => setMenuMuted((muted) => !muted)}
+              className="px-3 py-1 rounded-full bg-white/10 text-white text-xs tracking-widest hover:bg-white/20 transition"
+            >
+              MUSIC {menuMuted ? "OFF" : "ON"}
             </button>
           </div>
 

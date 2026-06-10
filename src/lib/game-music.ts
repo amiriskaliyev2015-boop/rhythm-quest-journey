@@ -164,6 +164,11 @@ export class LevelMusic {
     if (!this.ctx || !this.master) return;
     const scale = SCALES[this.config.scale];
 
+    if (step === 0 || step === 8) {
+      const chordRoot = this.config.rootMidi + (step === 0 ? 12 : 17);
+      this.playChord(chordRoot, time, sixteenth * 8, 0.035);
+    }
+
     // Lead arpeggio every 16th.
     const deg = this.config.pattern[step];
     if (deg >= 0) {
@@ -176,6 +181,11 @@ export class LevelMusic {
       const bDeg = this.config.bassPattern[(step / 2) % 8];
       const midi = this.config.rootMidi + scale[bDeg];
       this.playNote(midi, time, sixteenth * 1.8, this.config.bassWave, 0.13);
+    }
+
+    if (step % 4 === 2) {
+      const harmonyMidi = this.config.rootMidi + 19 + scale[(step / 2) % scale.length];
+      this.playNote(harmonyMidi, time, sixteenth * 1.6, "triangle", 0.045);
     }
 
     // Kick on 1 and 3 of each beat group (steps 0, 4, 8, 12).
@@ -211,6 +221,25 @@ export class LevelMusic {
     g.connect(this.master);
     osc.start(time);
     osc.stop(time + duration + 0.02);
+  }
+
+  private playChord(rootMidi: number, time: number, duration: number, gain: number) {
+    if (!this.ctx || !this.master) return;
+    const notes = [0, 7, 12, 15];
+    notes.forEach((offset, index) => {
+      const osc = this.ctx!.createOscillator();
+      const g = this.ctx!.createGain();
+      osc.type = index % 2 === 0 ? "triangle" : "sine";
+      osc.frequency.value = midiToFreq(rootMidi + offset);
+      g.gain.setValueAtTime(0, time);
+      g.gain.linearRampToValueAtTime(gain / (index + 1), time + 0.08);
+      g.gain.linearRampToValueAtTime(gain * 0.35, time + duration * 0.65);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+      osc.connect(g);
+      g.connect(this.master!);
+      osc.start(time);
+      osc.stop(time + duration + 0.05);
+    });
   }
 
   private playKick(time: number) {
@@ -269,5 +298,149 @@ export class LevelMusic {
     g.connect(this.master);
     src.start(time);
     src.stop(time + 0.15);
+  }
+}
+
+export class MenuMusic {
+  private ctx: AudioContext | null = null;
+  private master: GainNode | null = null;
+  private timer: number | null = null;
+  private step = 0;
+  private nextTime = 0;
+  private muted = false;
+  private stopped = true;
+  private readonly progression = [48, 43, 45, 41];
+
+  setMuted(m: boolean) {
+    this.muted = m;
+    if (this.master && this.ctx) {
+      this.master.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.master.gain.linearRampToValueAtTime(m ? 0 : 0.14, this.ctx.currentTime + 0.12);
+    }
+  }
+
+  async start() {
+    if (!this.stopped) return;
+    this.stopped = false;
+    try {
+      const Ctx =
+        (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
+          .AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      this.ctx = new Ctx();
+      if (this.ctx.state === "suspended") {
+        await this.ctx.resume().catch(() => {});
+      }
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.14;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 3600;
+      filter.Q.value = 0.5;
+      this.master.connect(filter);
+      filter.connect(this.ctx.destination);
+      this.step = 0;
+      this.nextTime = this.ctx.currentTime + 0.08;
+      this.tick();
+    } catch {
+      // Ignore unavailable browser audio.
+    }
+  }
+
+  stop() {
+    this.stopped = true;
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    if (this.ctx) {
+      const ctx = this.ctx;
+      try {
+        this.master?.gain.cancelScheduledValues(ctx.currentTime);
+        this.master?.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
+        setTimeout(() => {
+          ctx.close().catch(() => {});
+        }, 240);
+      } catch {
+        // ignore
+      }
+      this.ctx = null;
+      this.master = null;
+    }
+  }
+
+  private tick = () => {
+    if (this.stopped || !this.ctx || !this.master) return;
+    const eighth = 60 / 104 / 2;
+    while (this.nextTime < this.ctx.currentTime + 0.25) {
+      this.scheduleStep(this.step, this.nextTime, eighth);
+      this.nextTime += eighth;
+      this.step = (this.step + 1) % 32;
+    }
+    this.timer = window.setTimeout(this.tick, 60) as unknown as number;
+  };
+
+  private scheduleStep(step: number, time: number, eighth: number) {
+    const root = this.progression[Math.floor(step / 8) % this.progression.length];
+    if (step % 8 === 0) {
+      this.playPad(root, time, eighth * 8);
+      this.playBass(root - 12, time, eighth * 3.5);
+    }
+    if (step % 4 === 2) {
+      this.playBass(root - 5, time, eighth * 2);
+    }
+    const melody = [12, 15, 19, 17, 12, 10, 7, 10, 12, 15, 22, 19, 17, 15, 12, 10];
+    if (step % 2 === 0) {
+      this.playBell(root + melody[(step / 2) % melody.length], time, eighth * 1.5);
+    }
+  }
+
+  private playPad(rootMidi: number, time: number, duration: number) {
+    if (!this.ctx || !this.master) return;
+    [0, 7, 12, 15].forEach((offset, index) => {
+      const osc = this.ctx!.createOscillator();
+      const g = this.ctx!.createGain();
+      osc.type = "sine";
+      osc.frequency.value = midiToFreq(rootMidi + offset);
+      g.gain.setValueAtTime(0, time);
+      g.gain.linearRampToValueAtTime(0.032 / (index + 1), time + 0.28);
+      g.gain.linearRampToValueAtTime(0.014, time + duration * 0.8);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+      osc.connect(g);
+      g.connect(this.master!);
+      osc.start(time);
+      osc.stop(time + duration + 0.05);
+    });
+  }
+
+  private playBass(midi: number, time: number, duration: number) {
+    if (!this.ctx || !this.master) return;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = midiToFreq(midi);
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(0.08, time + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+    osc.connect(g);
+    g.connect(this.master);
+    osc.start(time);
+    osc.stop(time + duration + 0.03);
+  }
+
+  private playBell(midi: number, time: number, duration: number) {
+    if (!this.ctx || !this.master) return;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = midiToFreq(midi);
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(0.045, time + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+    osc.connect(g);
+    g.connect(this.master);
+    osc.start(time);
+    osc.stop(time + duration + 0.02);
   }
 }
