@@ -5,6 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 type AuthMode = "signin" | "signup";
 
+const getRedirectUrl = () => {
+  if (typeof window === "undefined") return undefined;
+  return window.location.origin;
+};
+
 export function AuthPanel() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<AuthMode>("signin");
@@ -50,13 +55,13 @@ export function AuthPanel() {
           email,
           password,
           options: {
-            emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+            emailRedirectTo: getRedirectUrl(),
           },
         });
 
         if (signUpError) throw signUpError;
         setUser(data.user ?? null);
-        setStatus(data.session ? "Аккаунт создан." : "Проверь email для подтверждения.");
+        setStatus(data.session ? "Account created." : "Check your email to confirm the account.");
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -64,12 +69,12 @@ export function AuthPanel() {
         });
 
         if (signInError) throw signInError;
-        setStatus("Вход выполнен.");
+        setStatus("Signed in.");
       }
 
       setPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка авторизации.");
+      setError(err instanceof Error ? err.message : "Authentication failed.");
     } finally {
       setLoading(false);
     }
@@ -80,17 +85,21 @@ export function AuthPanel() {
     setLoading(true);
 
     try {
-      const { error: googleError } = await supabase.auth.signInWithOAuth({
+      const { data, error: googleError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+          redirectTo: getRedirectUrl(),
+          skipBrowserRedirect: true,
         },
       });
 
       if (googleError) throw googleError;
+      if (!data.url) throw new Error("Supabase did not return a Google login URL.");
+
+      window.location.assign(data.url);
     } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign in failed.");
       setLoading(false);
-      setError(err instanceof Error ? err.message : "Google вход не запустился.");
     }
   };
 
@@ -104,19 +113,19 @@ export function AuthPanel() {
       setUser(null);
       setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось выйти.");
+      setError(err instanceof Error ? err.message : "Sign out failed.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed right-3 top-3 z-50 w-[min(calc(100vw-1.5rem),22rem)] text-white">
+    <div className="pointer-events-auto fixed right-3 top-3 z-[9999] w-[min(calc(100vw-1.5rem),22rem)] text-white">
       <div className="rounded-lg border border-white/15 bg-black/65 p-3 shadow-2xl backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-bold tracking-[0.25em] text-white/45">ACCOUNT</p>
-            <p className="truncate text-sm font-bold">{user?.email ?? "Гость"}</p>
+            <p className="truncate text-sm font-bold">{user?.email ?? "Guest"}</p>
           </div>
 
           {user ? (
@@ -124,9 +133,9 @@ export function AuthPanel() {
               type="button"
               onClick={signOut}
               disabled={loading}
-              className="rounded-md border border-white/15 px-3 py-2 text-xs font-black tracking-widest text-white/85 transition hover:bg-white/10 disabled:opacity-50"
+              className="rounded-md border border-white/15 px-3 py-2 text-xs font-black tracking-widest text-white/85 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              ВЫЙТИ
+              SIGN OUT
             </button>
           ) : (
             <button
@@ -137,15 +146,15 @@ export function AuthPanel() {
               }}
               className="rounded-md bg-white px-3 py-2 text-xs font-black tracking-widest text-black transition hover:scale-105"
             >
-              ВОЙТИ
+              SIGN IN
             </button>
           )}
         </div>
 
         {!authReady && (
           <p className="mt-3 text-xs leading-relaxed text-red-200">
-            Supabase env не настроены. Добавь `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`,
-            `VITE_SUPABASE_URL` и `VITE_SUPABASE_PUBLISHABLE_KEY`.
+            Supabase env is not configured. Add SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
+            VITE_SUPABASE_URL, and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.
           </p>
         )}
 
@@ -162,7 +171,7 @@ export function AuthPanel() {
                   mode === "signin" ? "bg-white text-black" : "text-white/70 hover:bg-white/10"
                 }`}
               >
-                ВХОД
+                LOGIN
               </button>
               <button
                 type="button"
@@ -174,7 +183,7 @@ export function AuthPanel() {
                   mode === "signup" ? "bg-white text-black" : "text-white/70 hover:bg-white/10"
                 }`}
               >
-                РЕГИСТРАЦИЯ
+                SIGN UP
               </button>
             </div>
 
@@ -192,7 +201,7 @@ export function AuthPanel() {
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-xs font-bold tracking-widest text-white/55">ПАРОЛЬ</span>
+              <span className="mb-1 block text-xs font-bold tracking-widest text-white/55">PASSWORD</span>
               <input
                 type="password"
                 required
@@ -201,7 +210,7 @@ export function AuthPanel() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-300"
-                placeholder="минимум 6 символов"
+                placeholder="minimum 6 characters"
               />
             </label>
 
@@ -213,7 +222,7 @@ export function AuthPanel() {
               disabled={loading}
               className="w-full rounded-md bg-cyan-300 px-4 py-3 text-sm font-black tracking-widest text-black transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "..." : mode === "signin" ? "ВОЙТИ" : "СОЗДАТЬ АККАУНТ"}
+              {loading ? "..." : mode === "signin" ? "LOGIN" : "CREATE ACCOUNT"}
             </button>
 
             <button
@@ -222,7 +231,7 @@ export function AuthPanel() {
               disabled={loading}
               className="w-full rounded-md border border-white/20 bg-white/5 px-4 py-3 text-sm font-black tracking-widest text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              GOOGLE
+              {loading ? "OPENING GOOGLE..." : "CONTINUE WITH GOOGLE"}
             </button>
           </form>
         )}
