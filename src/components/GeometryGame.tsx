@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
+import { generateAiLevel, getAiCoachTip } from "@/lib/ai-game.functions";
 import { LevelMusic } from "@/lib/game-music";
 
 const GROUND_H = 80;
@@ -171,9 +173,11 @@ interface Props {
   bestAttempts: number | null;
   bestPercent: number;
   skin: Skin;
+  coachTip: string | null;
+  coachLoading: boolean;
   onExit: () => void;
   onWin: (info: { attempts: number; reward: number; isNewRecord: boolean }) => void;
-  onDeath: (info: { percent: number; reward: number; isNewRecord: boolean }) => void;
+  onDeath: (info: { percent: number; reward: number; isNewRecord: boolean; attempts: number; vehicle: Vehicle }) => void;
 }
 
 const BASE_REWARD = 50;
@@ -233,7 +237,7 @@ const VEHICLE_LABELS: Record<Vehicle, string> = {
   wave: "BOLT",
 };
 
-function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }: Props) {
+function Game({ level, bestAttempts, bestPercent, skin, coachTip, coachLoading, onExit, onWin, onDeath }: Props) {
   const [winInfo, setWinInfo] = useState<{ reward: number; isNewRecord: boolean } | null>(null);
   const [deathInfo, setDeathInfo] = useState<{ percent: number; reward: number; isNewRecord: boolean } | null>(null);
   const bestPercentRef = useRef(bestPercent);
@@ -358,7 +362,13 @@ function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }
       stateRef.current = "dead";
       const pct = Math.floor(progressRef.current * 100);
       const info = computePercentReward(level.index, pct, bestPercentRef.current);
-      const payload = { percent: pct, reward: info.reward, isNewRecord: info.isNewRecord };
+      const payload = {
+        percent: pct,
+        reward: info.reward,
+        isNewRecord: info.isNewRecord,
+        attempts: attemptsRef.current,
+        vehicle,
+      };
       setDeathInfo(payload);
       if (info.isNewRecord) bestPercentRef.current = pct;
       onDeath(payload);
@@ -1069,6 +1079,14 @@ function Game({ level, bestAttempts, bestPercent, skin, onExit, onWin, onDeath }
                 )}
               </div>
             )}
+            <div className="mt-4 max-w-md rounded-lg border border-cyan-300/25 bg-black/50 px-4 py-3 text-cyan-100">
+              <div className="text-[10px] font-black tracking-[0.25em] text-cyan-300/70">
+                AI COACH
+              </div>
+              <div className="mt-1 text-sm font-bold tracking-wider">
+                {coachLoading ? "Analyzing your crash..." : coachTip ?? "Crash once to get a personalized tip."}
+              </div>
+            </div>
             <div className="mt-3 text-white/80 text-sm tracking-widest">
               TAP / SPACE TO RETRY
             </div>
@@ -1124,6 +1142,15 @@ export default function GeometryGame() {
   const [save, setSave] = useState<GameSave>(defaultSave);
   const [bestPercents, setBestPercents] = useState<Record<number, number>>({});
   const [shopMsg, setShopMsg] = useState<string | null>(null);
+  const [aiPrompt, setAiPrompt] = useState("neon rift");
+  const [aiDifficulty, setAiDifficulty] = useState<"easy" | "normal" | "hard" | "rage">("normal");
+  const [aiLevel, setAiLevel] = useState<Level | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [coachTip, setCoachTip] = useState<string | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const createAiLevel = useServerFn(generateAiLevel);
+  const askCoach = useServerFn(getAiCoachTip);
 
   useEffect(() => {
     setSave(readGameSave());
@@ -1195,21 +1222,60 @@ export default function GeometryGame() {
   );
 
   const handleDeath = useCallback(
-    (i: number, info: { percent: number; reward: number; isNewRecord: boolean }) => {
-      if (!info.isNewRecord || info.reward <= 0) return;
-      setBestPercents((prev) => {
-        const next = { ...prev, [i]: info.percent };
-        writeBestPercents(next);
-        return next;
-      });
-      setSave((prev) => commitSave({ ...prev, prisms: prev.prisms + info.reward }));
+    (i: number, level: Level, info: { percent: number; reward: number; isNewRecord: boolean; attempts: number; vehicle: Vehicle }) => {
+      if (i >= 0 && info.isNewRecord && info.reward > 0) {
+        setBestPercents((prev) => {
+          const next = { ...prev, [i]: info.percent };
+          writeBestPercents(next);
+          return next;
+        });
+        setSave((prev) => commitSave({ ...prev, prisms: prev.prisms + info.reward }));
+      }
+
+      setCoachTip(null);
+      setCoachLoading(true);
+      void askCoach({
+        data: {
+          levelName: level.name,
+          vehicle: info.vehicle,
+          percent: info.percent,
+          attempts: info.attempts,
+          bestPercent: i >= 0 ? bestPercents[i] ?? 0 : 0,
+        },
+      })
+        .then((tip) => setCoachTip(tip))
+        .catch(() => setCoachTip("Watch the next hazard, not your character. Let the rhythm cue your move."))
+        .finally(() => setCoachLoading(false));
     },
-    [commitSave],
+    [askCoach, bestPercents, commitSave],
   );
 
   const selectLevel = (i: number) => {
+    setCoachTip(null);
+    setCoachLoading(false);
     setSelected(i);
     setScreen("playing");
+  };
+
+  const playAiLevel = () => {
+    if (!aiLevel) return;
+    setCoachTip(null);
+    setCoachLoading(false);
+    setSelected(-1);
+    setScreen("playing");
+  };
+
+  const requestAiLevel = async () => {
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const level = await createAiLevel({ data: { prompt: aiPrompt, difficulty: aiDifficulty } });
+      setAiLevel(level);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "AI level generation failed.");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const goToMenu = () => {
@@ -1361,17 +1427,25 @@ export default function GeometryGame() {
   }
 
   if (selected !== null && screen === "playing") {
-    const level = LEVELS[selected];
+    const level = selected === -1 && aiLevel ? aiLevel : LEVELS[selected];
+    if (!level) {
+      return null;
+    }
+    const regularLevel = selected >= 0;
     return (
       <Game
         key={selected}
         level={level}
-        bestAttempts={save.bestAttempts[selected] ?? null}
-        bestPercent={bestPercents[selected] ?? 0}
+        bestAttempts={regularLevel ? save.bestAttempts[selected] ?? null : null}
+        bestPercent={regularLevel ? bestPercents[selected] ?? 0 : 0}
         skin={equippedSkin}
+        coachTip={coachTip}
+        coachLoading={coachLoading}
         onExit={goToMenu}
-        onWin={(info) => handleWin(selected, info)}
-        onDeath={(info) => handleDeath(selected, info)}
+        onWin={(info) => {
+          if (regularLevel) handleWin(selected, info);
+        }}
+        onDeath={(info) => handleDeath(regularLevel ? selected : -1, level, info)}
       />
 
     );
@@ -1404,6 +1478,64 @@ export default function GeometryGame() {
             </button>
           </div>
 
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-cyan-300/25 bg-black/35 p-5 text-white shadow-[0_0_40px_rgba(34,211,238,0.12)] backdrop-blur">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div className="flex-1">
+              <div className="text-[10px] font-black tracking-[0.3em] text-cyan-300/80">AI LEVEL GENERATOR</div>
+              <label className="mt-3 block">
+                <span className="mb-1 block text-xs font-bold tracking-widest text-white/50">PROMPT</span>
+                <input
+                  value={aiPrompt}
+                  onChange={(event) => setAiPrompt(event.target.value)}
+                  maxLength={80}
+                  className="w-full rounded-md border border-white/15 bg-black/35 px-3 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-300"
+                  placeholder="wave-heavy neon boss"
+                />
+              </label>
+            </div>
+
+            <label className="block lg:w-44">
+              <span className="mb-1 block text-xs font-bold tracking-widest text-white/50">DIFFICULTY</span>
+              <select
+                value={aiDifficulty}
+                onChange={(event) => setAiDifficulty(event.target.value as typeof aiDifficulty)}
+                className="w-full rounded-md border border-white/15 bg-black/35 px-3 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300"
+              >
+                <option value="easy">EASY</option>
+                <option value="normal">NORMAL</option>
+                <option value="hard">HARD</option>
+                <option value="rage">RAGE</option>
+              </select>
+            </label>
+
+            <button
+              onClick={requestAiLevel}
+              disabled={aiLoading}
+              className="rounded-md bg-cyan-300 px-5 py-3 text-sm font-black tracking-widest text-black transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {aiLoading ? "GENERATING..." : "GENERATE"}
+            </button>
+
+            <button
+              onClick={playAiLevel}
+              disabled={!aiLevel || aiLoading}
+              className="rounded-md border border-white/20 bg-white/10 px-5 py-3 text-sm font-black tracking-widest text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              PLAY AI
+            </button>
+          </div>
+
+          {aiError && <div className="mt-3 text-xs font-bold tracking-wider text-red-200">{aiError}</div>}
+          {aiLevel && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-bold tracking-widest text-white/70">
+              <span className="text-cyan-200">{aiLevel.name.toUpperCase()}</span>
+              <span>{VEHICLE_LABELS[aiLevel.startingVehicle]}</span>
+              <span>SPEED {Math.round(aiLevel.speed)}</span>
+              <span>{aiLevel.obstacles.length} HAZARDS</span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
