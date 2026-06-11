@@ -1029,8 +1029,10 @@ function Game({ level, bestAttempts, bestPercent, skin, coachTip, coachLoading, 
       : "HOLD — UP · RELEASE — DOWN";
 
   return (
-    <div className="fixed inset-0 bg-black">
-      <canvas ref={canvasRef} className="w-full h-full block touch-none" />
+    <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-black p-3 pt-20 sm:p-6 sm:pt-20">
+      <div className="relative h-[min(74vh,760px)] max-h-[calc(100vh-7rem)] min-h-[320px] w-full max-w-7xl overflow-hidden rounded-lg border border-white/10 shadow-[0_0_70px_rgba(34,211,238,0.16)] sm:min-h-[420px]">
+        <canvas ref={canvasRef} className="h-full w-full block touch-none" />
+      </div>
 
       <div className="absolute top-0 left-0 right-0 p-4 flex items-center gap-4 text-white">
         <button
