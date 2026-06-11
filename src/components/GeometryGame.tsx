@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import QRCode from "qrcode";
 import { LEVELS, CEIL_HEIGHT, type Level, type Obstacle, type Vehicle } from "@/lib/game-engine";
 import { generateAiLevel, getAiCoachTip } from "@/lib/ai-game.functions";
 import { LevelMusic, MenuMusic } from "@/lib/game-music";
@@ -1147,7 +1148,7 @@ function Game({ level, bestAttempts, bestPercent, skin, coachTip, coachLoading, 
 }
 
 export default function GeometryGame() {
-  const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "dashboard" | "playing">("intro");
+  const [screen, setScreen] = useState<"intro" | "levels" | "shop" | "dashboard" | "qr" | "playing">("intro");
   const [selected, setSelected] = useState<number | null>(null);
   const [save, setSave] = useState<GameSave>(defaultSave);
   const [bestPercents, setBestPercents] = useState<Record<number, number>>({});
@@ -1155,6 +1156,9 @@ export default function GeometryGame() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const [qrUrl, setQrUrl] = useState("");
+  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
   const [menuMuted, setMenuMuted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("gd_muted") === "1";
@@ -1268,6 +1272,37 @@ export default function GeometryGame() {
       void loadLeaderboard();
     }
   }, [loadLeaderboard, screen]);
+
+  useEffect(() => {
+    if (screen !== "qr" || typeof window === "undefined") return;
+
+    const url = window.location.origin;
+    setQrUrl(url);
+    setQrImage(null);
+    setQrError(null);
+
+    void QRCode.toDataURL(url, {
+      errorCorrectionLevel: "H",
+      margin: 2,
+      width: 1024,
+      color: {
+        dark: "#020617",
+        light: "#ffffff",
+      },
+    })
+      .then((image) => setQrImage(image))
+      .catch(() => setQrError("QR code could not be generated."));
+  }, [screen]);
+
+  const downloadQrCode = useCallback(() => {
+    if (!qrImage || typeof document === "undefined") return;
+    const link = document.createElement("a");
+    link.href = qrImage;
+    link.download = "prism-rush-qr.png";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, [qrImage]);
 
   // Dev helper — open browser console and type: __addPrisms(150000)
   useEffect(() => {
@@ -1547,6 +1582,51 @@ export default function GeometryGame() {
     );
   }
 
+  if (screen === "qr") {
+    return (
+      <div className="prism-stage fixed inset-0 flex items-center justify-center overflow-hidden px-4 py-12">
+        <div className="relative z-10 w-full max-w-md text-center text-white">
+          <button
+            onClick={() => setScreen("intro")}
+            className="mb-6 rounded-md bg-white/10 px-4 py-2 text-sm font-bold tracking-widest text-white transition hover:bg-white/20"
+          >
+            BACK
+          </button>
+
+          <h2
+            className="text-4xl font-black tracking-[0.2em] text-transparent bg-clip-text md:text-5xl"
+            style={{ backgroundImage: "linear-gradient(120deg, #22d3ee, #a855f7, #f472b6)" }}
+          >
+            QR CODE
+          </h2>
+          <p className="mt-3 break-all text-xs font-bold tracking-widest text-white/45">{qrUrl || "Preparing game link..."}</p>
+
+          <div className="mt-8 rounded-lg border border-cyan-300/25 bg-black/45 p-5 shadow-[0_0_50px_rgba(34,211,238,0.16)] backdrop-blur">
+            {qrImage ? (
+              <img
+                src={qrImage}
+                alt="PRISM RUSH QR code"
+                className="mx-auto aspect-square w-full max-w-[320px] rounded-md bg-white p-3"
+              />
+            ) : (
+              <div className="mx-auto flex aspect-square w-full max-w-[320px] items-center justify-center rounded-md bg-white/10 text-sm font-black tracking-widest text-white/50">
+                {qrError ?? "GENERATING..."}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={downloadQrCode}
+            disabled={!qrImage}
+            className="mt-6 w-full rounded-md bg-cyan-300 px-5 py-4 text-sm font-black tracking-[0.2em] text-black transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            DOWNLOAD PNG
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === "shop") {
     return (
       <div className="prism-stage min-h-screen px-4 py-12 md:py-16 overflow-hidden">
@@ -1676,6 +1756,14 @@ export default function GeometryGame() {
                          bg-cyan-500/10"
             >
               DASHBOARD
+            </button>
+            <button
+              onClick={() => setScreen("qr")}
+              className="px-10 py-5 text-xl font-black tracking-[0.2em] text-white rounded-full border-2 border-fuchsia-300/50
+                         hover:border-fuchsia-200 hover:scale-105 active:scale-95 transition-all duration-200
+                         bg-fuchsia-500/10"
+            >
+              QR CODE
             </button>
             <button
               onClick={() => { setShopMsg(null); setScreen("shop"); }}
